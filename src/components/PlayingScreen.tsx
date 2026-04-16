@@ -10,6 +10,7 @@ interface Props {
 
 export default function PlayingScreen({ players, dispatch }: Props) {
   const [lastBuyId, setLastBuyId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const totalStacks = players.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
@@ -32,9 +33,12 @@ export default function PlayingScreen({ players, dispatch }: Props) {
   }
 
   function handleEndGame() {
-    if (window.confirm("End the game and move to cashout?")) {
-      dispatch({ type: "END_GAME" });
-    }
+    setShowConfirm(true);
+  }
+
+  function confirmEndGame() {
+    setShowConfirm(false);
+    dispatch({ type: "END_GAME" });
   }
 
   return (
@@ -92,6 +96,25 @@ export default function PlayingScreen({ players, dispatch }: Props) {
       <button className="btn btn-danger btn-end" onClick={handleEndGame}>
         End Game
       </button>
+
+      {showConfirm && (
+        <div className="modal-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p className="modal-message">End the game and move to cashout?</p>
+            <div className="modal-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={confirmEndGame}>
+                End Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
