@@ -1,0 +1,108 @@
+import type { Dispatch } from "react";
+import type { Player, Action } from "../types";
+import { CHIPS_PER_STACK } from "../constants";
+import { formatChips } from "../utils/format";
+
+interface Props {
+  players: Player[];
+  dispatch: Dispatch<Action>;
+}
+
+export default function CashoutScreen({ players, dispatch }: Props) {
+  const totalBoughtIn = players.reduce(
+    (sum, p) => sum + p.stacksBought * CHIPS_PER_STACK,
+    0
+  );
+  const totalReturned = players.reduce(
+    (sum, p) => sum + (p.chipsReturned ?? 0),
+    0
+  );
+  const difference = totalBoughtIn - totalReturned;
+  const allEntered = players.every((p) => p.chipsReturned !== null);
+  const isBalanced = difference === 0;
+
+  return (
+    <div className="screen cashout-screen">
+      <h2>Cashout</h2>
+      <p className="cashout-instruction">
+        Enter the chips each player is returning
+      </p>
+
+      <div className="player-list">
+        {players.map((player) => {
+          const boughtIn = player.stacksBought * CHIPS_PER_STACK;
+          return (
+            <div key={player.id} className="cashout-player-row">
+              <div className="player-info">
+                <span className="player-name">{player.name}</span>
+                <span className="player-detail">
+                  Bought: {formatChips(boughtIn)} chips
+                </span>
+              </div>
+              <div className="chips-input-wrapper">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="chips-input"
+                  placeholder="0"
+                  value={player.chipsReturned ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      dispatch({
+                        type: "SET_CHIPS_RETURNED",
+                        playerId: player.id,
+                        chips: null,
+                      });
+                    } else {
+                      const num = parseInt(val, 10);
+                      if (!isNaN(num) && num >= 0) {
+                        dispatch({
+                          type: "SET_CHIPS_RETURNED",
+                          playerId: player.id,
+                          chips: num,
+                        });
+                      }
+                    }
+                  }}
+                />
+                <span className="chips-label">chips</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        className={`validation-banner ${isBalanced && allEntered ? "balanced" : difference !== 0 && allEntered ? "unbalanced" : ""}`}
+      >
+        <div className="validation-row">
+          <span>Total bought in:</span>
+          <span>{formatChips(totalBoughtIn)} chips</span>
+        </div>
+        <div className="validation-row">
+          <span>Total returned:</span>
+          <span>{formatChips(totalReturned)} chips</span>
+        </div>
+        {difference !== 0 && (
+          <div className="validation-row validation-diff">
+            <span>Difference:</span>
+            <span>{formatChips(Math.abs(difference))} chips {difference > 0 ? "missing" : "extra"}</span>
+          </div>
+        )}
+        {isBalanced && allEntered && (
+          <div className="validation-row validation-ok">Chips are balanced!</div>
+        )}
+      </div>
+
+      <button
+        className="btn btn-primary btn-calculate"
+        onClick={() => dispatch({ type: "CALCULATE" })}
+        disabled={!allEntered}
+      >
+        Calculate Results
+      </button>
+    </div>
+  );
+}
