@@ -8,10 +8,14 @@ import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
 import "./App.css";
 
-function createPlayer(index: number): Player {
+const DEFAULT_NAMES = [
+  "Bảo", "a Minh", "a Đạt", "a Hải", "a Phúc", "Hiếu", "bé Đào", "Đông",
+];
+
+function createPlayer(name: string): Player {
   return {
     id: crypto.randomUUID(),
-    name: `Player ${index + 1}`,
+    name,
     stacksBought: 0,
     chipsReturned: null,
   };
@@ -20,7 +24,7 @@ function createPlayer(index: number): Player {
 function createInitialSession(): Session {
   return {
     phase: "setup",
-    players: Array.from({ length: 8 }, (_, i) => createPlayer(i)),
+    players: DEFAULT_NAMES.map((name) => createPlayer(name)),
   };
 }
 
@@ -37,7 +41,7 @@ function reducer(state: Session, action: Action): Session {
     case "ADD_PLAYER":
       return {
         ...state,
-        players: [...state.players, createPlayer(state.players.length)],
+        players: [...state.players, createPlayer(`Player ${state.players.length + 1}`)],
       };
 
     case "REMOVE_PLAYER":
