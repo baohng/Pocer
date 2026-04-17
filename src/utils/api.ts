@@ -13,7 +13,11 @@ export async function submitGameResult(
   endTime: Date,
   players: Player[]
 ): Promise<void> {
-  const sheetName = `${endTime.getMonth() + 1}/${endTime.getFullYear()}`;
+  const shifted = new Date(endTime);
+  if (shifted.getDate() >= 26) {
+    shifted.setMonth(shifted.getMonth() + 1);
+  }
+  const sheetName = `${shifted.getMonth() + 1}/${shifted.getFullYear()}`;
 
   const netsK = players.map((p) => {
     const boughtIn = p.stacksBought * CHIPS_PER_STACK;
