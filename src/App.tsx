@@ -9,7 +9,7 @@ import SummaryScreen from "./components/SummaryScreen";
 import "./App.css";
 
 const DEFAULT_NAMES = [
-  "Bảo", "a Minh", "a Đạt", "a Hải", "a Phúc", "Hiếu", "bé Đào", "Đông",
+  "Đạt", "Hải", "Minh", "Đông", "Mạnh", "Phúc", "Hiếu", "Bảo",
 ];
 
 function createPlayer(name: string): Player {

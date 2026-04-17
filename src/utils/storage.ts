@@ -1,6 +1,6 @@
 import type { Session } from "../types";
 
-const STORAGE_KEY = "pocer_session";
+const STORAGE_KEY = "pocer_session_v2";
 
 export function saveSession(session: Session): void {
   try {

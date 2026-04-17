@@ -1,11 +1,19 @@
+import { useState } from "react";
 import type { Dispatch } from "react";
 import type { Player, Action } from "../types";
 import { CHIPS_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
+import { submitGameResult } from "../utils/api";
 
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
+}
+
+function nowLocalDatetimeValue(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function CashoutScreen({ players, dispatch }: Props) {
@@ -20,6 +28,37 @@ export default function CashoutScreen({ players, dispatch }: Props) {
   const difference = totalBoughtIn - totalReturned;
   const allEntered = players.every((p) => p.chipsReturned !== null);
   const isBalanced = difference === 0;
+
+  const [showEndTimeModal, setShowEndTimeModal] = useState(false);
+  const [endTimeValue, setEndTimeValue] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  function openEndTimeModal() {
+    setEndTimeValue(nowLocalDatetimeValue());
+    setSubmitError(null);
+    setShowEndTimeModal(true);
+  }
+
+  async function handleSubmit() {
+    if (!endTimeValue) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await submitGameResult(new Date(endTimeValue), players);
+      setShowEndTimeModal(false);
+      dispatch({ type: "CALCULATE" });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleSkip() {
+    setShowEndTimeModal(false);
+    dispatch({ type: "CALCULATE" });
+  }
 
   return (
     <div className="screen cashout-screen">
@@ -98,11 +137,58 @@ export default function CashoutScreen({ players, dispatch }: Props) {
 
       <button
         className="btn btn-primary btn-calculate"
-        onClick={() => dispatch({ type: "CALCULATE" })}
-        disabled={!allEntered}
+        onClick={openEndTimeModal}
       >
         Calculate Results
       </button>
+
+      {showEndTimeModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => !submitting && setShowEndTimeModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p className="modal-message">Enter game end time</p>
+            <input
+              type="datetime-local"
+              className="chips-input"
+              value={endTimeValue}
+              onChange={(e) => setEndTimeValue(e.target.value)}
+              disabled={submitting}
+            />
+            {submitError && (
+              <p className="modal-message" style={{ color: "#d33", marginTop: "0.5rem" }}>
+                Error: {submitError}
+              </p>
+            )}
+            <div className="modal-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowEndTimeModal(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              {submitError && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleSkip}
+                  disabled={submitting}
+                >
+                  Skip & Continue
+                </button>
+              )}
+              <button
+                className="btn btn-primary"
+                onClick={handleSubmit}
+                disabled={submitting || !endTimeValue}
+              >
+                {submitting ? "Submitting..." : submitError ? "Retry" : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
