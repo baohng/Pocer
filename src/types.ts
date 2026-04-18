@@ -1,6 +1,7 @@
 export interface Player {
   id: string;
   name: string;
+  active: boolean;
   stacksBought: number;
   chipsReturned: number | null;
 }
@@ -16,6 +17,7 @@ export type Action =
   | { type: "SET_PLAYER_NAME"; playerId: string; name: string }
   | { type: "ADD_PLAYER" }
   | { type: "REMOVE_PLAYER"; playerId: string }
+  | { type: "READD_PLAYER"; playerId: string }
   | { type: "START_GAME" }
   | { type: "BUY_STACK"; playerId: string }
   | { type: "UNDO_BUY"; playerId: string }

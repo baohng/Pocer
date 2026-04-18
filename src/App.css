@@ -173,6 +173,36 @@
   color: var(--text-muted);
 }
 
+.inactive-players {
+  margin-top: 4px;
+}
+
+.inactive-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.setup-player-row.inactive {
+  opacity: 0.5;
+  justify-content: space-between;
+}
+
+.player-name-inactive {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.btn-readd {
+  font-size: 20px;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.btn-readd:hover {
+  color: var(--primary-hover);
+}
+
 .btn-add-player {
   width: 100%;
 }

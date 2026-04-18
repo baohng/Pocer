@@ -20,15 +20,18 @@ export async function submitGameResult(
   const sheetName = `${shifted.getMonth() + 1}/${shifted.getFullYear()}`;
 
   const netsK = players.map((p) => {
+    if (!p.active) return 0;
     const boughtIn = p.stacksBought * CHIPS_PER_STACK;
     const returned = p.chipsReturned ?? 0;
     return ((returned - boughtIn) * VND_PER_CHIP) / 1000;
   });
 
-  const totalBuyInK = players.reduce(
-    (sum, p) => sum + (p.stacksBought * CHIPS_PER_STACK * VND_PER_CHIP) / 1000,
-    0
-  );
+  const totalBuyInK = players
+    .filter((p) => p.active)
+    .reduce(
+      (sum, p) => sum + (p.stacksBought * CHIPS_PER_STACK * VND_PER_CHIP) / 1000,
+      0
+    );
 
   const row = [formatEndTime(endTime), ...netsK, totalBuyInK];
 

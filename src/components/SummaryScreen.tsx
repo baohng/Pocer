@@ -18,6 +18,7 @@ interface PlayerResult {
 
 function getResults(players: Player[]): PlayerResult[] {
   return players
+    .filter((p) => p.active)
     .map((p) => {
       const chipsBoughtIn = p.stacksBought * CHIPS_PER_STACK;
       const chipsReturned = p.chipsReturned ?? 0;

@@ -17,16 +17,17 @@ function nowLocalDatetimeValue(): string {
 }
 
 export default function CashoutScreen({ players, dispatch }: Props) {
-  const totalBoughtIn = players.reduce(
+  const activePlayers = players.filter((p) => p.active);
+  const totalBoughtIn = activePlayers.reduce(
     (sum, p) => sum + p.stacksBought * CHIPS_PER_STACK,
     0
   );
-  const totalReturned = players.reduce(
+  const totalReturned = activePlayers.reduce(
     (sum, p) => sum + (p.chipsReturned ?? 0),
     0
   );
   const difference = totalBoughtIn - totalReturned;
-  const allEntered = players.every((p) => p.chipsReturned !== null);
+  const allEntered = activePlayers.every((p) => p.chipsReturned !== null);
   const isBalanced = difference === 0;
 
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
@@ -68,7 +69,7 @@ export default function CashoutScreen({ players, dispatch }: Props) {
       </p>
 
       <div className="player-list">
-        {players.map((player) => {
+        {activePlayers.map((player) => {
           const boughtIn = player.stacksBought * CHIPS_PER_STACK;
           return (
             <div key={player.id} className="cashout-player-row">

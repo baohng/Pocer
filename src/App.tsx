@@ -16,6 +16,7 @@ function createPlayer(name: string): Player {
   return {
     id: crypto.randomUUID(),
     name,
+    active: true,
     stacksBought: 0,
     chipsReturned: null,
   };
@@ -44,18 +45,32 @@ function reducer(state: Session, action: Action): Session {
         players: [...state.players, createPlayer(`Player ${state.players.length + 1}`)],
       };
 
-    case "REMOVE_PLAYER":
-      if (state.players.length <= 2) return state;
+    case "REMOVE_PLAYER": {
+      const activeCount = state.players.filter((p) => p.active).length;
+      if (activeCount <= 2) return state;
       return {
         ...state,
-        players: state.players.filter((p) => p.id !== action.playerId),
+        players: state.players.map((p) =>
+          p.id === action.playerId ? { ...p, active: false } : p
+        ),
+      };
+    }
+
+    case "READD_PLAYER":
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId ? { ...p, active: true } : p
+        ),
       };
 
     case "START_GAME":
       return {
         ...state,
         phase: "playing",
-        players: state.players.map((p) => ({ ...p, stacksBought: 1 })),
+        players: state.players.map((p) =>
+          p.active ? { ...p, stacksBought: 1 } : p
+        ),
       };
 
     case "BUY_STACK":
@@ -115,7 +130,14 @@ export function getTotalChipsReturned(players: Player[]): number {
 function App() {
   const [session, dispatch] = useReducer(reducer, null, () => {
     const saved = loadSession();
-    return saved ?? createInitialSession();
+    if (saved) {
+      saved.players = saved.players.map((p) => ({
+        ...p,
+        active: p.active ?? true,
+      }));
+      return saved;
+    }
+    return createInitialSession();
   });
 
   useEffect(() => {

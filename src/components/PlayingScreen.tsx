@@ -9,10 +9,11 @@ interface Props {
 }
 
 export default function PlayingScreen({ players, dispatch }: Props) {
+  const activePlayers = players.filter((p) => p.active);
   const [lastBuyId, setLastBuyId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const totalStacks = players.reduce((sum, p) => sum + p.stacksBought, 0);
+  const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
   const totalVND = totalStacks * VND_PER_STACK;
 
@@ -59,7 +60,7 @@ export default function PlayingScreen({ players, dispatch }: Props) {
       </div>
 
       <div className="player-list">
-        {players.map((player) => {
+        {activePlayers.map((player) => {
           const chips = player.stacksBought * CHIPS_PER_STACK;
           const vnd = player.stacksBought * VND_PER_STACK;
           return (
