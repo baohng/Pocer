@@ -2,7 +2,7 @@ import type { Player } from "../types";
 import { CHIPS_PER_STACK, VND_PER_CHIP } from "../constants";
 
 export const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbzE0eNse-aXyazbQFNZMmLX9VJJd6gdlUrppuw0nu7oA3BtO0OYOxBAhaUrsnrOFVUc2Q/exec";
+  "https://script.google.com/macros/s/AKfycbxh8zEUHn3OgGk3QG_P7XGTlVNUkJW_03LkI4IPoTbI344FQuJOes_Ph_hiIJzOys0sKw/exec";
 
 function formatEndTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
