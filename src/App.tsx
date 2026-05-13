@@ -1,11 +1,12 @@
 import { useReducer, useEffect } from "react";
 import type { Session, Action, Player } from "./types";
-import { CHIPS_PER_STACK } from "./constants";
 import { saveSession, loadSession } from "./utils/storage";
+import ModeScreen from "./components/ModeScreen";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
+import { ToastProvider } from "./components/Toast";
 import "./App.css";
 
 const DEFAULT_NAMES = [
@@ -24,13 +25,25 @@ function createPlayer(name: string): Player {
 
 function createInitialSession(): Session {
   return {
-    phase: "setup",
-    players: DEFAULT_NAMES.map((name) => createPlayer(name)),
+    phase: "mode",
+    mode: "fixed",
+    players: [],
   };
 }
 
 function reducer(state: Session, action: Action): Session {
   switch (action.type) {
+    case "CHOOSE_MODE":
+      return {
+        ...state,
+        phase: "setup",
+        mode: action.mode,
+        players: DEFAULT_NAMES.map((name) => createPlayer(name)),
+      };
+
+    case "BACK_TO_MODE":
+      return { phase: "mode", mode: state.mode, players: [] };
+
     case "SET_PLAYER_NAME":
       return {
         ...state,
@@ -112,19 +125,15 @@ function reducer(state: Session, action: Action): Session {
       return { ...state, phase: "summary" };
 
     case "RESET":
-      return createInitialSession();
+      return {
+        phase: "mode",
+        mode: state.mode,
+        players: [],
+      };
 
     default:
       return state;
   }
-}
-
-export function getTotalChipsBoughtIn(players: Player[]): number {
-  return players.reduce((sum, p) => sum + p.stacksBought * CHIPS_PER_STACK, 0);
-}
-
-export function getTotalChipsReturned(players: Player[]): number {
-  return players.reduce((sum, p) => sum + (p.chipsReturned ?? 0), 0);
 }
 
 function App() {
@@ -135,6 +144,7 @@ function App() {
         ...p,
         active: p.active ?? true,
       }));
+      saved.mode = saved.mode ?? "fixed";
       return saved;
     }
     return createInitialSession();
@@ -145,26 +155,33 @@ function App() {
   }, [session]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Pocer</h1>
-        <span className="app-subtitle">Poker Calculator</span>
-      </header>
-      <main className="app-main">
-        {session.phase === "setup" && (
-          <SetupScreen players={session.players} dispatch={dispatch} />
-        )}
-        {session.phase === "playing" && (
-          <PlayingScreen players={session.players} dispatch={dispatch} />
-        )}
-        {session.phase === "cashout" && (
-          <CashoutScreen players={session.players} dispatch={dispatch} />
-        )}
-        {session.phase === "summary" && (
-          <SummaryScreen players={session.players} dispatch={dispatch} />
-        )}
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="app">
+        <header className="app-header">
+          <h1>Pocer</h1>
+          <span className="app-subtitle">Poker Calculator</span>
+        </header>
+        <main className="app-main">
+          <div className="screen-wrapper" key={session.phase}>
+            {session.phase === "mode" && (
+              <ModeScreen dispatch={dispatch} />
+            )}
+            {session.phase === "setup" && (
+              <SetupScreen players={session.players} dispatch={dispatch} mode={session.mode} />
+            )}
+            {session.phase === "playing" && (
+              <PlayingScreen players={session.players} dispatch={dispatch} />
+            )}
+            {session.phase === "cashout" && (
+              <CashoutScreen players={session.players} dispatch={dispatch} mode={session.mode} />
+            )}
+            {session.phase === "summary" && (
+              <SummaryScreen players={session.players} dispatch={dispatch} />
+            )}
+          </div>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }
 

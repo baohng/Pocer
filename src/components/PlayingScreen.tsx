@@ -2,6 +2,7 @@ import { useState, useEffect, type Dispatch } from "react";
 import type { Player, Action } from "../types";
 import { CHIPS_PER_STACK, VND_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
+import { useToast } from "./Toast";
 
 interface Props {
   players: Player[];
@@ -12,6 +13,7 @@ export default function PlayingScreen({ players, dispatch }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const [lastBuyId, setLastBuyId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
@@ -28,9 +30,10 @@ export default function PlayingScreen({ players, dispatch }: Props) {
     setLastBuyId(playerId);
   }
 
-  function handleUndo(playerId: string) {
+  function handleUndo(playerId: string, playerName: string) {
     dispatch({ type: "UNDO_BUY", playerId });
     setLastBuyId(null);
+    showToast(`Undo stack of ${playerName}`, "warning");
   }
 
   function handleEndGame() {
@@ -60,11 +63,12 @@ export default function PlayingScreen({ players, dispatch }: Props) {
       </div>
 
       <div className="player-list">
-        {activePlayers.map((player) => {
+        {activePlayers.map((player, i) => {
           const chips = player.stacksBought * CHIPS_PER_STACK;
           const vnd = player.stacksBought * VND_PER_STACK;
           return (
-            <div key={player.id} className="playing-player-row">
+            <div key={player.id} className="playing-player-row item-animated"
+              style={{ animationDelay: `${i * 0.04}s` }}>
               <div className="player-info">
                 <span className="player-name">{player.name}</span>
                 <span className="player-detail">
@@ -77,7 +81,7 @@ export default function PlayingScreen({ players, dispatch }: Props) {
                 {lastBuyId === player.id && player.stacksBought > 1 && (
                   <button
                     className="btn btn-undo"
-                    onClick={() => handleUndo(player.id)}
+                    onClick={() => handleUndo(player.id, player.name)}
                   >
                     Undo
                   </button>

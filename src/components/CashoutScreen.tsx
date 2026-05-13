@@ -8,6 +8,7 @@ import { submitGameResult } from "../utils/api";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
+  mode: "fixed" | "flexible";
 }
 
 function nowLocalDatetimeValue(): string {
@@ -16,7 +17,7 @@ function nowLocalDatetimeValue(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function CashoutScreen({ players, dispatch }: Props) {
+export default function CashoutScreen({ players, dispatch, mode }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const totalBoughtIn = activePlayers.reduce(
     (sum, p) => sum + p.stacksBought * CHIPS_PER_STACK,
@@ -46,7 +47,7 @@ export default function CashoutScreen({ players, dispatch }: Props) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitGameResult(new Date(endTimeValue), players);
+      await submitGameResult(new Date(endTimeValue), players, mode);
       setShowEndTimeModal(false);
       dispatch({ type: "CALCULATE" });
     } catch (err) {
@@ -69,10 +70,10 @@ export default function CashoutScreen({ players, dispatch }: Props) {
       </p>
 
       <div className="player-list">
-        {activePlayers.map((player) => {
+        {activePlayers.map((player, i) => {
           const boughtIn = player.stacksBought * CHIPS_PER_STACK;
           return (
-            <div key={player.id} className="cashout-player-row">
+            <div key={player.id} className="cashout-player-row item-animated" style={{ animationDelay: `${i * 0.04}s` }}>
               <div className="player-info">
                 <span className="player-name">{player.name}</span>
                 <span className="player-detail">

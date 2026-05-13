@@ -4,22 +4,27 @@ import type { Player, Action } from "../types";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
+  mode: "fixed" | "flexible";
 }
 
-export default function SetupScreen({ players, dispatch }: Props) {
+export default function SetupScreen({ players, dispatch, mode }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const inactivePlayers = players.filter((p) => !p.active);
+  const isFlexible = mode === "flexible";
 
   return (
     <div className="screen setup-screen">
       <div className="section-header">
+        <button className="btn-back" onClick={() => dispatch({ type: "BACK_TO_MODE" })} aria-label="Back to mode">
+          ← Back
+        </button>
         <h2>Players</h2>
         <span className="player-count">{activePlayers.length} players</span>
       </div>
 
       <div className="player-list">
         {activePlayers.map((player, index) => (
-          <div key={player.id} className="setup-player-row">
+          <div key={player.id} className="setup-player-row item-animated" style={{ animationDelay: `${index * 0.04}s` }}>
             <span className="player-number">{index + 1}</span>
             <input
               type="text"
@@ -34,7 +39,7 @@ export default function SetupScreen({ players, dispatch }: Props) {
               }
               placeholder={`Player ${index + 1}`}
             />
-            {activePlayers.length > 2 && (
+            {isFlexible && activePlayers.length > 2 && (
               <button
                 className="btn-icon btn-remove"
                 onClick={() =>
@@ -53,8 +58,8 @@ export default function SetupScreen({ players, dispatch }: Props) {
         <div className="inactive-players">
           <p className="inactive-label">Removed</p>
           <div className="player-list">
-            {inactivePlayers.map((player) => (
-              <div key={player.id} className="setup-player-row inactive">
+            {inactivePlayers.map((player, index) => (
+              <div key={player.id} className="setup-player-row inactive item-animated" style={{ animationDelay: `${index * 0.04}s` }}>
                 <span className="player-name-inactive">{player.name}</span>
                 <button
                   className="btn-icon btn-readd"
@@ -71,12 +76,14 @@ export default function SetupScreen({ players, dispatch }: Props) {
         </div>
       )}
 
-      <button
-        className="btn btn-secondary btn-add-player"
-        onClick={() => dispatch({ type: "ADD_PLAYER" })}
-      >
-        + Add Player
-      </button>
+      {isFlexible && (
+        <button
+          className="btn btn-secondary btn-add-player"
+          onClick={() => dispatch({ type: "ADD_PLAYER" })}
+        >
+          + Add Player
+        </button>
+      )}
 
       <div className="setup-info">
         <p>Each player buys in 1 stack (2,000 chips = 50.000 VND)</p>

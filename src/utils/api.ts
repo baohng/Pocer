@@ -1,5 +1,5 @@
 import type { Player } from "../types";
-import { CHIPS_PER_STACK, VND_PER_CHIP } from "../constants";
+import { CHIPS_PER_STACK, VND_PER_CHIP, FLEXIBLE_SCRIPT_URL } from "../constants";
 
 export const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxh8zEUHn3OgGk3QG_P7XGTlVNUkJW_03LkI4IPoTbI344FQuJOes_Ph_hiIJzOys0sKw/exec";
@@ -11,7 +11,8 @@ function formatEndTime(d: Date): string {
 
 export async function submitGameResult(
   endTime: Date,
-  players: Player[]
+  players: Player[],
+  mode: "fixed" | "flexible"
 ): Promise<void> {
   const shifted = new Date(endTime);
   if (shifted.getDate() >= 26) {
@@ -35,7 +36,9 @@ export async function submitGameResult(
 
   const row = [formatEndTime(endTime), ...netsK, totalBuyInK];
 
-  const res = await fetch(APPS_SCRIPT_URL, {
+  const url = mode === "flexible" ? FLEXIBLE_SCRIPT_URL : APPS_SCRIPT_URL;
+
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ sheetName, row }),

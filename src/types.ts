@@ -6,14 +6,17 @@ export interface Player {
   chipsReturned: number | null;
 }
 
-export type Phase = "setup" | "playing" | "cashout" | "summary";
+export type Phase = "mode" | "setup" | "playing" | "cashout" | "summary";
 
 export interface Session {
   phase: Phase;
+  mode: "fixed" | "flexible";
   players: Player[];
 }
 
 export type Action =
+  | { type: "CHOOSE_MODE"; mode: "fixed" | "flexible" }
+  | { type: "BACK_TO_MODE" }
   | { type: "SET_PLAYER_NAME"; playerId: string; name: string }
   | { type: "ADD_PLAYER" }
   | { type: "REMOVE_PLAYER"; playerId: string }
