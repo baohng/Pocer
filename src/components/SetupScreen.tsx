@@ -39,7 +39,7 @@ export default function SetupScreen({ players, dispatch, mode }: Props) {
               }
               placeholder={`Player ${index + 1}`}
             />
-            {isFlexible && activePlayers.length > 2 && (
+            {activePlayers.length > 2 && (
               <button
                 className="btn-icon btn-remove"
                 onClick={() =>
