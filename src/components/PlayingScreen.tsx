@@ -10,7 +10,7 @@ interface Props {
   mode: "fixed" | "flexible";
 }
 
-export default function PlayingScreen({ players, dispatch }: Props) {
+export default function PlayingScreen({ players, dispatch, mode }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const inactivePlayers = players.filter((p) => !p.active);
   const [lastBuyId, setLastBuyId] = useState<string | null>(null);
