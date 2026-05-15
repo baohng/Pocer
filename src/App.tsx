@@ -52,11 +52,17 @@ function reducer(state: Session, action: Action): Session {
         ),
       };
 
-    case "ADD_PLAYER":
+    case "ADD_PLAYER": {
+      const name = action.name ?? `Player ${state.players.length + 1}`;
+      const player = createPlayer(name);
+      if (state.phase === "playing") {
+        player.stacksBought = 1;
+      }
       return {
         ...state,
-        players: [...state.players, createPlayer(`Player ${state.players.length + 1}`)],
+        players: [...state.players, player],
       };
+    }
 
     case "REMOVE_PLAYER": {
       const activeCount = state.players.filter((p) => p.active).length;
@@ -73,7 +79,16 @@ function reducer(state: Session, action: Action): Session {
       return {
         ...state,
         players: state.players.map((p) =>
-          p.id === action.playerId ? { ...p, active: true } : p
+          p.id === action.playerId
+            ? {
+                ...p,
+                active: true,
+                stacksBought:
+                  state.phase === "playing"
+                    ? Math.max(1, p.stacksBought)
+                    : p.stacksBought,
+              }
+            : p
         ),
       };
 
@@ -170,7 +185,7 @@ function App() {
               <SetupScreen players={session.players} dispatch={dispatch} mode={session.mode} />
             )}
             {session.phase === "playing" && (
-              <PlayingScreen players={session.players} dispatch={dispatch} />
+              <PlayingScreen players={session.players} dispatch={dispatch} mode={session.mode} />
             )}
             {session.phase === "cashout" && (
               <CashoutScreen players={session.players} dispatch={dispatch} mode={session.mode} />

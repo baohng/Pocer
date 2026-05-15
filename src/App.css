@@ -411,6 +411,37 @@
   margin-top: 8px;
 }
 
+.add-player-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.add-player-form .player-name-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 16px;
+  color: var(--text-heading);
+  outline: none;
+}
+
+.add-player-form .player-name-input:focus {
+  border-color: var(--primary);
+}
+
+.add-player-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* Cashout Screen */
 .cashout-instruction {
   font-size: 14px;

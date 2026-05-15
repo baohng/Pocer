@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch } from "react";
+import { useState, useEffect, useRef, type Dispatch } from "react";
 import type { Player, Action } from "../types";
 import { CHIPS_PER_STACK, VND_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
@@ -7,12 +7,17 @@ import { useToast } from "./Toast";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
+  mode: "fixed" | "flexible";
 }
 
 export default function PlayingScreen({ players, dispatch }: Props) {
   const activePlayers = players.filter((p) => p.active);
+  const inactivePlayers = players.filter((p) => !p.active);
   const [lastBuyId, setLastBuyId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const addInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
@@ -24,6 +29,12 @@ export default function PlayingScreen({ players, dispatch }: Props) {
     const timer = setTimeout(() => setLastBuyId(null), 4000);
     return () => clearTimeout(timer);
   }, [lastBuyId]);
+
+  useEffect(() => {
+    if (addPlayerOpen && addInputRef.current) {
+      addInputRef.current.focus();
+    }
+  }, [addPlayerOpen]);
 
   function handleBuy(playerId: string) {
     dispatch({ type: "BUY_STACK", playerId });
@@ -43,6 +54,27 @@ export default function PlayingScreen({ players, dispatch }: Props) {
   function confirmEndGame() {
     setShowConfirm(false);
     dispatch({ type: "END_GAME" });
+  }
+
+  function handleAddPlayer() {
+    const name = newPlayerName.trim();
+    if (!name) return;
+    dispatch({ type: "ADD_PLAYER", name });
+    setNewPlayerName("");
+    setAddPlayerOpen(false);
+  }
+
+  function handleCancelAdd() {
+    setNewPlayerName("");
+    setAddPlayerOpen(false);
+  }
+
+  function handleAddKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      handleAddPlayer();
+    } else if (e.key === "Escape") {
+      handleCancelAdd();
+    }
   }
 
   return (
@@ -97,6 +129,61 @@ export default function PlayingScreen({ players, dispatch }: Props) {
           );
         })}
       </div>
+
+      {inactivePlayers.length > 0 && (
+        <div className="inactive-players">
+          <p className="inactive-label">Removed</p>
+          <div className="player-list">
+            {inactivePlayers.map((player) => (
+              <div key={player.id} className="setup-player-row inactive">
+                <span className="player-name-inactive">{player.name}</span>
+                <button
+                  className="btn-icon btn-readd"
+                  onClick={() =>
+                    dispatch({ type: "READD_PLAYER", playerId: player.id })
+                  }
+                  aria-label="Re-add player"
+                >
+                  +
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {addPlayerOpen ? (
+        <div className="add-player-form">
+          <input
+            ref={addInputRef}
+            type="text"
+            className="player-name-input"
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            onKeyDown={handleAddKeyDown}
+            placeholder="Player name"
+          />
+          <div className="add-player-actions">
+            <button className="btn btn-secondary" onClick={handleCancelAdd}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleAddPlayer}
+              disabled={!newPlayerName.trim()}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          className="btn btn-secondary btn-add-player"
+          onClick={() => setAddPlayerOpen(true)}
+        >
+          + Add Player
+        </button>
+      )}
 
       <button className="btn btn-danger btn-end" onClick={handleEndGame}>
         End Game

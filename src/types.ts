@@ -18,7 +18,7 @@ export type Action =
   | { type: "CHOOSE_MODE"; mode: "fixed" | "flexible" }
   | { type: "BACK_TO_MODE" }
   | { type: "SET_PLAYER_NAME"; playerId: string; name: string }
-  | { type: "ADD_PLAYER" }
+  | { type: "ADD_PLAYER"; name?: string }
   | { type: "REMOVE_PLAYER"; playerId: string }
   | { type: "READD_PLAYER"; playerId: string }
   | { type: "START_GAME" }
