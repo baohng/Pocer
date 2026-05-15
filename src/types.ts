@@ -4,6 +4,7 @@ export interface Player {
   active: boolean;
   stacksBought: number;
   chipsReturned: number | null;
+  cashedOut: boolean;
 }
 
 export type Phase = "mode" | "setup" | "playing" | "cashout" | "summary";
@@ -21,6 +22,8 @@ export type Action =
   | { type: "ADD_PLAYER"; name?: string }
   | { type: "REMOVE_PLAYER"; playerId: string }
   | { type: "READD_PLAYER"; playerId: string }
+  | { type: "EARLY_CASHOUT"; playerId: string; chips: number }
+  | { type: "UNDO_EARLY_CASHOUT"; playerId: string }
   | { type: "START_GAME" }
   | { type: "BUY_STACK"; playerId: string }
   | { type: "UNDO_BUY"; playerId: string }

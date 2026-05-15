@@ -20,6 +20,7 @@ function createPlayer(name: string): Player {
     active: true,
     stacksBought: 0,
     chipsReturned: null,
+    cashedOut: false,
   };
 }
 
@@ -92,6 +93,26 @@ function reducer(state: Session, action: Action): Session {
         ),
       };
 
+    case "EARLY_CASHOUT":
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId
+            ? { ...p, chipsReturned: action.chips, cashedOut: true }
+            : p
+        ),
+      };
+
+    case "UNDO_EARLY_CASHOUT":
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId
+            ? { ...p, chipsReturned: null, cashedOut: false }
+            : p
+        ),
+      };
+
     case "START_GAME":
       return {
         ...state,
@@ -125,7 +146,9 @@ function reducer(state: Session, action: Action): Session {
       return {
         ...state,
         phase: "cashout",
-        players: state.players.map((p) => ({ ...p, chipsReturned: null })),
+        players: state.players.map((p) =>
+          p.cashedOut ? p : { ...p, chipsReturned: null }
+        ),
       };
 
     case "SET_CHIPS_RETURNED":
@@ -158,6 +181,7 @@ function App() {
       saved.players = saved.players.map((p) => ({
         ...p,
         active: p.active ?? true,
+        cashedOut: p.cashedOut ?? false,
       }));
       saved.mode = saved.mode ?? "fixed";
       return saved;

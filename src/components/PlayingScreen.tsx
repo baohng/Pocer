@@ -17,7 +17,10 @@ export default function PlayingScreen({ players, dispatch }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState("");
+  const [cashoutPlayerId, setCashoutPlayerId] = useState<string | null>(null);
+  const [cashoutChips, setCashoutChips] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
+  const cashoutInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
@@ -35,6 +38,12 @@ export default function PlayingScreen({ players, dispatch }: Props) {
       addInputRef.current.focus();
     }
   }, [addPlayerOpen]);
+
+  useEffect(() => {
+    if (cashoutPlayerId && cashoutInputRef.current) {
+      cashoutInputRef.current.focus();
+    }
+  }, [cashoutPlayerId]);
 
   function handleBuy(playerId: string) {
     dispatch({ type: "BUY_STACK", playerId });
@@ -69,6 +78,30 @@ export default function PlayingScreen({ players, dispatch }: Props) {
     setAddPlayerOpen(false);
   }
 
+  function handleOpenCashout(playerId: string) {
+    setCashoutPlayerId(playerId);
+    setCashoutChips("");
+  }
+
+  function handleConfirmCashout() {
+    if (!cashoutPlayerId) return;
+    const chips = parseInt(cashoutChips, 10);
+    if (isNaN(chips) || chips < 0) return;
+    dispatch({ type: "EARLY_CASHOUT", playerId: cashoutPlayerId, chips });
+    setCashoutPlayerId(null);
+    setCashoutChips("");
+  }
+
+  function handleCancelCashout() {
+    setCashoutPlayerId(null);
+    setCashoutChips("");
+  }
+
+  function handleCashoutKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") handleConfirmCashout();
+    else if (e.key === "Escape") handleCancelCashout();
+  }
+
   function handleAddKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       handleAddPlayer();
@@ -98,33 +131,79 @@ export default function PlayingScreen({ players, dispatch }: Props) {
         {activePlayers.map((player, i) => {
           const chips = player.stacksBought * CHIPS_PER_STACK;
           const vnd = player.stacksBought * VND_PER_STACK;
+          const isBeingCashedOut = cashoutPlayerId === player.id;
           return (
-            <div key={player.id} className="playing-player-row item-animated"
+            <div key={player.id} className={`playing-player-row item-animated${player.cashedOut ? " cashed-out" : ""}`}
               style={{ animationDelay: `${i * 0.04}s` }}>
               <div className="player-info">
-                <span className="player-name">{player.name}</span>
+                <span className="player-name">
+                  {player.name}
+                  {player.cashedOut && <span className="badge-left">Left</span>}
+                </span>
                 <span className="player-detail">
                   {player.stacksBought} stack{player.stacksBought > 1 ? "s" : ""}{" "}
                   &middot; {formatChips(chips)} chips &middot;{" "}
                   {formatChips(vnd)} VND
+                  {player.cashedOut && player.chipsReturned !== null && (
+                    <> &middot; returned {formatChips(player.chipsReturned)} chips</>
+                  )}
                 </span>
               </div>
-              <div className="player-actions">
-                {lastBuyId === player.id && player.stacksBought > 1 && (
+              {player.cashedOut ? (
+                <div className="player-actions">
                   <button
                     className="btn btn-undo"
-                    onClick={() => handleUndo(player.id, player.name)}
+                    onClick={() => dispatch({ type: "UNDO_EARLY_CASHOUT", playerId: player.id })}
                   >
                     Undo
                   </button>
-                )}
-                <button
-                  className="btn btn-buy"
-                  onClick={() => handleBuy(player.id)}
-                >
-                  + Buy Stack
-                </button>
-              </div>
+                </div>
+              ) : isBeingCashedOut ? (
+                <div className="cashout-inline-form">
+                  <input
+                    ref={cashoutInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="chips-input"
+                    placeholder="Chips returned"
+                    value={cashoutChips}
+                    onChange={(e) => setCashoutChips(e.target.value)}
+                    onKeyDown={handleCashoutKeyDown}
+                  />
+                  <button className="btn btn-secondary" onClick={handleCancelCashout}>Cancel</button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleConfirmCashout}
+                    disabled={cashoutChips === "" || isNaN(parseInt(cashoutChips, 10))}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              ) : (
+                <div className="player-actions">
+                  {lastBuyId === player.id && player.stacksBought > 1 && (
+                    <button
+                      className="btn btn-undo"
+                      onClick={() => handleUndo(player.id, player.name)}
+                    >
+                      Undo
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-buy"
+                    onClick={() => handleBuy(player.id)}
+                  >
+                    + Buy Stack
+                  </button>
+                  <button
+                    className="btn btn-cashout"
+                    onClick={() => handleOpenCashout(player.id)}
+                  >
+                    Cash Out
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

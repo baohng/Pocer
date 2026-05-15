@@ -19,6 +19,8 @@ function nowLocalDatetimeValue(): string {
 
 export default function CashoutScreen({ players, dispatch, mode }: Props) {
   const activePlayers = players.filter((p) => p.active);
+  const pendingPlayers = activePlayers.filter((p) => !p.cashedOut);
+  const earlyLeavers = activePlayers.filter((p) => p.cashedOut);
   const totalBoughtIn = activePlayers.reduce(
     (sum, p) => sum + p.stacksBought * CHIPS_PER_STACK,
     0
@@ -28,7 +30,7 @@ export default function CashoutScreen({ players, dispatch, mode }: Props) {
     0
   );
   const difference = totalBoughtIn - totalReturned;
-  const allEntered = activePlayers.every((p) => p.chipsReturned !== null);
+  const allEntered = pendingPlayers.every((p) => p.chipsReturned !== null);
   const isBalanced = difference === 0;
 
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
@@ -70,7 +72,7 @@ export default function CashoutScreen({ players, dispatch, mode }: Props) {
       </p>
 
       <div className="player-list">
-        {activePlayers.map((player, i) => {
+        {pendingPlayers.map((player, i) => {
           const boughtIn = player.stacksBought * CHIPS_PER_STACK;
           return (
             <div key={player.id} className="cashout-player-row item-animated" style={{ animationDelay: `${i * 0.04}s` }}>
@@ -114,6 +116,27 @@ export default function CashoutScreen({ players, dispatch, mode }: Props) {
           );
         })}
       </div>
+
+      {earlyLeavers.length > 0 && (
+        <div className="inactive-players">
+          <p className="inactive-label">Already cashed out</p>
+          <div className="player-list">
+            {earlyLeavers.map((player) => {
+              const boughtIn = player.stacksBought * CHIPS_PER_STACK;
+              return (
+                <div key={player.id} className="cashout-player-row cashout-early">
+                  <div className="player-info">
+                    <span className="player-name">{player.name}</span>
+                    <span className="player-detail">
+                      Bought: {formatChips(boughtIn)} chips &middot; Returned: {formatChips(player.chipsReturned ?? 0)} chips
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div
         className={`validation-banner ${isBalanced && allEntered ? "balanced" : difference !== 0 && allEntered ? "unbalanced" : ""}`}
