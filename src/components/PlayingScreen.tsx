@@ -7,7 +7,6 @@ import { useToast } from "./Toast";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
-  mode: "fixed" | "flexible";
 }
 
 export default function PlayingScreen({ players, dispatch }: Props) {

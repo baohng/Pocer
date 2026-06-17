@@ -4,20 +4,15 @@ import type { Player, Action } from "../types";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
-  mode: "fixed" | "flexible";
 }
 
-export default function SetupScreen({ players, dispatch, mode }: Props) {
+export default function SetupScreen({ players, dispatch }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const inactivePlayers = players.filter((p) => !p.active);
-  const isFlexible = mode === "flexible";
 
   return (
     <div className="screen setup-screen">
       <div className="section-header">
-        <button className="btn-back" onClick={() => dispatch({ type: "BACK_TO_MODE" })} aria-label="Back to mode">
-          ← Back
-        </button>
         <h2>Players</h2>
         <span className="player-count">{activePlayers.length} players</span>
       </div>
@@ -76,14 +71,12 @@ export default function SetupScreen({ players, dispatch, mode }: Props) {
         </div>
       )}
 
-      {isFlexible && (
-        <button
-          className="btn btn-secondary btn-add-player"
-          onClick={() => dispatch({ type: "ADD_PLAYER" })}
-        >
-          + Add Player
-        </button>
-      )}
+      <button
+        className="btn btn-secondary btn-add-player"
+        onClick={() => dispatch({ type: "ADD_PLAYER" })}
+      >
+        + Add Player
+      </button>
 
       <div className="setup-info">
         <p>Each player buys in 1 stack (2,000 chips = 50.000 VND)</p>

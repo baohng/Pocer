@@ -8,7 +8,6 @@ import { submitGameResult } from "../utils/api";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
-  mode: "fixed" | "flexible";
 }
 
 function nowLocalDatetimeValue(): string {
@@ -17,7 +16,7 @@ function nowLocalDatetimeValue(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function CashoutScreen({ players, dispatch, mode }: Props) {
+export default function CashoutScreen({ players, dispatch }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const pendingPlayers = activePlayers.filter((p) => !p.cashedOut);
   const earlyLeavers = activePlayers.filter((p) => p.cashedOut);
@@ -49,7 +48,7 @@ export default function CashoutScreen({ players, dispatch, mode }: Props) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitGameResult(new Date(endTimeValue), players, mode);
+      await submitGameResult(new Date(endTimeValue), players);
       setShowEndTimeModal(false);
       dispatch({ type: "CALCULATE" });
     } catch (err) {

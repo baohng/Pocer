@@ -1,7 +1,6 @@
 import { useReducer, useEffect } from "react";
-import type { Session, Action, Player } from "./types";
+import type { Session, Action, Player, Phase } from "./types";
 import { saveSession, loadSession } from "./utils/storage";
-import ModeScreen from "./components/ModeScreen";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
@@ -26,25 +25,13 @@ function createPlayer(name: string): Player {
 
 function createInitialSession(): Session {
   return {
-    phase: "mode",
-    mode: "fixed",
-    players: [],
+    phase: "setup",
+    players: DEFAULT_NAMES.map((name) => createPlayer(name)),
   };
 }
 
 function reducer(state: Session, action: Action): Session {
   switch (action.type) {
-    case "CHOOSE_MODE":
-      return {
-        ...state,
-        phase: "setup",
-        mode: action.mode,
-        players: DEFAULT_NAMES.map((name) => createPlayer(name)),
-      };
-
-    case "BACK_TO_MODE":
-      return { phase: "mode", mode: state.mode, players: [] };
-
     case "SET_PLAYER_NAME":
       return {
         ...state,
@@ -163,11 +150,7 @@ function reducer(state: Session, action: Action): Session {
       return { ...state, phase: "summary" };
 
     case "RESET":
-      return {
-        phase: "mode",
-        mode: state.mode,
-        players: [],
-      };
+      return createInitialSession();
 
     default:
       return state;
@@ -177,13 +160,12 @@ function reducer(state: Session, action: Action): Session {
 function App() {
   const [session, dispatch] = useReducer(reducer, null, () => {
     const saved = loadSession();
-    if (saved) {
+    if (saved && saved.phase !== ("mode" as Phase) && saved.players.length > 0) {
       saved.players = saved.players.map((p) => ({
         ...p,
         active: p.active ?? true,
         cashedOut: p.cashedOut ?? false,
       }));
-      saved.mode = saved.mode ?? "fixed";
       return saved;
     }
     return createInitialSession();
@@ -202,17 +184,14 @@ function App() {
         </header>
         <main className="app-main">
           <div className="screen-wrapper" key={session.phase}>
-            {session.phase === "mode" && (
-              <ModeScreen dispatch={dispatch} />
-            )}
             {session.phase === "setup" && (
-              <SetupScreen players={session.players} dispatch={dispatch} mode={session.mode} />
+              <SetupScreen players={session.players} dispatch={dispatch} />
             )}
             {session.phase === "playing" && (
-              <PlayingScreen players={session.players} dispatch={dispatch} mode={session.mode} />
+              <PlayingScreen players={session.players} dispatch={dispatch} />
             )}
             {session.phase === "cashout" && (
-              <CashoutScreen players={session.players} dispatch={dispatch} mode={session.mode} />
+              <CashoutScreen players={session.players} dispatch={dispatch} />
             )}
             {session.phase === "summary" && (
               <SummaryScreen players={session.players} dispatch={dispatch} />

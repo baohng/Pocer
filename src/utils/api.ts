@@ -1,8 +1,8 @@
 import type { Player } from "../types";
-import { CHIPS_PER_STACK, VND_PER_CHIP, FLEXIBLE_SCRIPT_URL } from "../constants";
+import { CHIPS_PER_STACK, VND_PER_CHIP } from "../constants";
 
 export const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxh8zEUHn3OgGk3QG_P7XGTlVNUkJW_03LkI4IPoTbI344FQuJOes_Ph_hiIJzOys0sKw/exec";
+  "https://script.google.com/macros/s/AKfycbxtwxB0MVgEwbG6vkW6z2JQHl0VrhG35F8Og5tgt2EsuJCI3DTqixGsBYY-PNnswRSJrQ/exec";
 
 function formatEndTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -11,8 +11,7 @@ function formatEndTime(d: Date): string {
 
 export async function submitGameResult(
   endTime: Date,
-  players: Player[],
-  mode: "fixed" | "flexible"
+  players: Player[]
 ): Promise<void> {
   const shifted = new Date(endTime);
   if (shifted.getDate() >= 26) {
@@ -34,11 +33,9 @@ export async function submitGameResult(
       0
     );
 
-  const row = [formatEndTime(endTime), ...netsK, totalBuyInK];
+  const row = [totalBuyInK, formatEndTime(endTime), ...netsK];
 
-  const url = mode === "flexible" ? FLEXIBLE_SCRIPT_URL : APPS_SCRIPT_URL;
-
-  const res = await fetch(url, {
+  const res = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ sheetName, row }),

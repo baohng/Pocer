@@ -551,6 +551,26 @@
   color: var(--text-muted);
 }
 
+.modal input[type="datetime-local"] {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.modal input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.modal input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 .validation-banner {
   background: var(--bg-card);
   border: 1px solid var(--border);
