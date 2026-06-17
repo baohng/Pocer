@@ -1,39 +1,12 @@
 import { useState, type Dispatch } from "react";
 import type { Player, Action } from "../types";
-import { CHIPS_PER_STACK, VND_PER_CHIP } from "../constants";
 import { formatVND, formatChips } from "../utils/format";
+import { getResults } from "../utils/results";
 import { useCountUp } from "../hooks/useCountUp";
 
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
-}
-
-interface PlayerResult {
-  name: string;
-  chipsBoughtIn: number;
-  chipsReturned: number;
-  netChips: number;
-  netVND: number;
-}
-
-function getResults(players: Player[]): PlayerResult[] {
-  return players
-    .filter((p) => p.active)
-    .map((p) => {
-      const chipsBoughtIn = p.stacksBought * CHIPS_PER_STACK;
-      const chipsReturned = p.chipsReturned ?? 0;
-      const netChips = chipsReturned - chipsBoughtIn;
-      const netVND = netChips * VND_PER_CHIP;
-      return {
-        name: p.name,
-        chipsBoughtIn,
-        chipsReturned,
-        netChips,
-        netVND,
-      };
-    })
-    .sort((a, b) => b.netVND - a.netVND);
 }
 
 const CONFETTI_COLORS = ["#6366f1", "#8b5cf6", "#22c55e", "#eab308", "#f87171", "#818cf8"];
@@ -154,8 +127,14 @@ export default function SummaryScreen({ players, dispatch }: Props) {
           Copy Results
         </button>
         <button
+          className="btn btn-secondary"
+          onClick={() => dispatch({ type: "OPEN_HISTORY" })}
+        >
+          History
+        </button>
+        <button
           className="btn btn-primary"
-          onClick={() => dispatch({ type: "RESET" })}
+          onClick={() => dispatch({ type: "FINISH_GAME" })}
         >
           New Game
         </button>

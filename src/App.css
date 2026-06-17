@@ -909,3 +909,122 @@
     opacity: 0;
   }
 }
+
+/* ===== History ===== */
+.player-count-row {
+  margin-bottom: 8px;
+}
+
+.history-empty {
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 32px;
+  font-size: 14px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-time {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.history-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.history-badge.badge-submitted {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.history-badge.badge-edited {
+  color: #eab308;
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.history-badge.badge-never {
+  color: var(--text-muted);
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.history-actions .btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.history-actions .btn-remove {
+  flex: 0 0 auto;
+}
+
+/* ===== Edit-mode stacks stepper ===== */
+.stacks-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.stacks-stepper-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-step {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-heading);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stacks-count {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+}

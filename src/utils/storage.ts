@@ -1,25 +1,62 @@
-import type { Session } from "../types";
+import type { AppState, Session, Player } from "../types";
 
-const STORAGE_KEY = "pocer_session_v2";
+const STORAGE_KEY = "pocer_session_v3";
+const LEGACY_KEY = "pocer_session_v2";
 
-export function saveSession(session: Session): void {
+function migratePlayers(players: Player[]): Player[] {
+  return players.map((p) => ({
+    ...p,
+    active: p.active ?? true,
+    cashedOut: p.cashedOut ?? false,
+  }));
+}
+
+export function saveAppState(state: AppState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // localStorage full or unavailable - silently ignore
   }
 }
 
-export function loadSession(): Session | null {
+export function loadAppState(): AppState | null {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return null;
-    return JSON.parse(data) as Session;
+    if (data) {
+      const state = JSON.parse(data) as AppState;
+      state.current.players = migratePlayers(state.current.players);
+      state.history = (state.history ?? []).map((g) => ({
+        ...g,
+        players: migratePlayers(g.players),
+      }));
+      state.editingId = state.editingId ?? null;
+      state.viewingHistory = state.viewingHistory ?? false;
+      return state;
+    }
+
+    // Migrate a legacy single-session save (pocer_session_v2).
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const session = JSON.parse(legacy) as Session;
+      // Pre-history saves stuck on the removed "mode" phase had no players.
+      if ((session.phase as string) === "mode" || session.players.length === 0) {
+        return null;
+      }
+      session.players = migratePlayers(session.players);
+      return {
+        current: session,
+        history: [],
+        editingId: null,
+        viewingHistory: false,
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }
 }
 
-export function clearSession(): void {
+export function clearAppState(): void {
   localStorage.removeItem(STORAGE_KEY);
 }

@@ -1,10 +1,11 @@
 import { useReducer, useEffect } from "react";
-import type { Session, Action, Player, Phase } from "./types";
-import { saveSession, loadSession } from "./utils/storage";
+import type { Session, Action, Player, AppState, GameRecord } from "./types";
+import { saveAppState, loadAppState } from "./utils/storage";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
+import HistoryScreen from "./components/HistoryScreen";
 import { ToastProvider } from "./components/Toast";
 import "./App.css";
 
@@ -30,7 +31,17 @@ function createInitialSession(): Session {
   };
 }
 
-function reducer(state: Session, action: Action): Session {
+function createInitialAppState(): AppState {
+  return {
+    current: createInitialSession(),
+    history: [],
+    editingId: null,
+    viewingHistory: false,
+  };
+}
+
+/** Reducer for the in-progress game (and the editing snapshot). */
+function gameReducer(state: Session, action: Action): Session {
   switch (action.type) {
     case "SET_PLAYER_NAME":
       return {
@@ -129,6 +140,16 @@ function reducer(state: Session, action: Action): Session {
         ),
       };
 
+    case "SET_STACKS_BOUGHT":
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === action.playerId
+            ? { ...p, stacksBought: Math.max(0, action.stacks) }
+            : p
+        ),
+      };
+
     case "END_GAME":
       return {
         ...state,
@@ -157,23 +178,101 @@ function reducer(state: Session, action: Action): Session {
   }
 }
 
-function App() {
-  const [session, dispatch] = useReducer(reducer, null, () => {
-    const saved = loadSession();
-    if (saved && saved.phase !== ("mode" as Phase) && saved.players.length > 0) {
-      saved.players = saved.players.map((p) => ({
-        ...p,
-        active: p.active ?? true,
-        cashedOut: p.cashedOut ?? false,
-      }));
-      return saved;
+/** Top-level reducer over AppState: game actions delegate to gameReducer,
+ *  history/editing actions operate on the history list. */
+function appReducer(state: AppState, action: Action): AppState {
+  switch (action.type) {
+    case "FINISH_GAME": {
+      const now = new Date().toISOString();
+      const record: GameRecord = {
+        id: crypto.randomUUID(),
+        endTime: action.endTime ?? now,
+        createdAt: now,
+        updatedAt: now,
+        submittedAt: null,
+        players: state.current.players,
+      };
+      return {
+        ...state,
+        current: createInitialSession(),
+        history: [record, ...state.history],
+      };
     }
-    return createInitialSession();
-  });
+
+    case "OPEN_HISTORY":
+      return { ...state, viewingHistory: true };
+
+    case "CLOSE_HISTORY":
+      return { ...state, viewingHistory: false, editingId: null };
+
+    case "EDIT_GAME": {
+      const record = state.history.find((g) => g.id === action.id);
+      if (!record) return state;
+      return {
+        ...state,
+        editingId: action.id,
+        current: { phase: "cashout", players: record.players },
+      };
+    }
+
+    case "SAVE_EDIT": {
+      if (!state.editingId) return state;
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        editingId: null,
+        history: state.history.map((g) =>
+          g.id === state.editingId
+            ? { ...g, players: state.current.players, updatedAt: now }
+            : g
+        ),
+        current: createInitialSession(),
+      };
+    }
+
+    case "DELETE_GAME":
+      return {
+        ...state,
+        history: state.history.filter((g) => g.id !== action.id),
+      };
+
+    case "MARK_SUBMITTED":
+      return {
+        ...state,
+        history: state.history.map((g) =>
+          g.id === action.id
+            ? { ...g, submittedAt: new Date().toISOString() }
+            : g
+        ),
+      };
+
+    default:
+      return { ...state, current: gameReducer(state.current, action) };
+  }
+}
+
+function App() {
+  const [state, dispatch] = useReducer(
+    appReducer,
+    null,
+    () => loadAppState() ?? createInitialAppState()
+  );
 
   useEffect(() => {
-    saveSession(session);
-  }, [session]);
+    saveAppState(state);
+  }, [state]);
+
+  const { current: session, history, editingId, viewingHistory } = state;
+  const editingRecord = editingId
+    ? history.find((g) => g.id === editingId) ?? null
+    : null;
+
+  // Render key so the entry-animation re-runs when the view changes.
+  const viewKey = editingId
+    ? `edit-${editingId}`
+    : viewingHistory
+      ? "history"
+      : session.phase;
 
   return (
     <ToastProvider>
@@ -183,18 +282,31 @@ function App() {
           <span className="app-subtitle">Poker Calculator</span>
         </header>
         <main className="app-main">
-          <div className="screen-wrapper" key={session.phase}>
-            {session.phase === "setup" && (
-              <SetupScreen players={session.players} dispatch={dispatch} />
-            )}
-            {session.phase === "playing" && (
-              <PlayingScreen players={session.players} dispatch={dispatch} />
-            )}
-            {session.phase === "cashout" && (
-              <CashoutScreen players={session.players} dispatch={dispatch} />
-            )}
-            {session.phase === "summary" && (
-              <SummaryScreen players={session.players} dispatch={dispatch} />
+          <div className="screen-wrapper" key={viewKey}>
+            {editingId ? (
+              <CashoutScreen
+                players={session.players}
+                dispatch={dispatch}
+                editing
+                submittedAt={editingRecord?.submittedAt ?? null}
+              />
+            ) : viewingHistory ? (
+              <HistoryScreen history={history} dispatch={dispatch} />
+            ) : (
+              <>
+                {session.phase === "setup" && (
+                  <SetupScreen players={session.players} dispatch={dispatch} />
+                )}
+                {session.phase === "playing" && (
+                  <PlayingScreen players={session.players} dispatch={dispatch} />
+                )}
+                {session.phase === "cashout" && (
+                  <CashoutScreen players={session.players} dispatch={dispatch} />
+                )}
+                {session.phase === "summary" && (
+                  <SummaryScreen players={session.players} dispatch={dispatch} />
+                )}
+              </>
             )}
           </div>
         </main>

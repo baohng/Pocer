@@ -8,6 +8,8 @@ import { submitGameResult } from "../utils/api";
 interface Props {
   players: Player[];
   dispatch: Dispatch<Action>;
+  editing?: boolean;
+  submittedAt?: string | null;
 }
 
 function nowLocalDatetimeValue(): string {
@@ -16,7 +18,11 @@ function nowLocalDatetimeValue(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function CashoutScreen({ players, dispatch }: Props) {
+export default function CashoutScreen({
+  players,
+  dispatch,
+  editing = false,
+}: Props) {
   const activePlayers = players.filter((p) => p.active);
   const pendingPlayers = activePlayers.filter((p) => !p.cashedOut);
   const earlyLeavers = activePlayers.filter((p) => p.cashedOut);
@@ -65,9 +71,24 @@ export default function CashoutScreen({ players, dispatch }: Props) {
 
   return (
     <div className="screen cashout-screen">
-      <h2>Cashout</h2>
+      {editing ? (
+        <div className="section-header">
+          <button
+            className="btn-back"
+            onClick={() => dispatch({ type: "CLOSE_HISTORY" })}
+            aria-label="Back to history"
+          >
+            ← Back
+          </button>
+          <h2>Edit Game</h2>
+        </div>
+      ) : (
+        <h2>Cashout</h2>
+      )}
       <p className="cashout-instruction">
-        Enter the chips each player is returning
+        {editing
+          ? "Adjust buy-ins and chips returned, then save"
+          : "Enter the chips each player is returning"}
       </p>
 
       <div className="player-list">
@@ -80,6 +101,39 @@ export default function CashoutScreen({ players, dispatch }: Props) {
                 <span className="player-detail">
                   Bought: {formatChips(boughtIn)} chips
                 </span>
+                {editing && (
+                  <div className="stacks-stepper">
+                    <span className="stacks-stepper-label">Stacks</span>
+                    <button
+                      className="btn-icon btn-step"
+                      onClick={() =>
+                        dispatch({
+                          type: "SET_STACKS_BOUGHT",
+                          playerId: player.id,
+                          stacks: player.stacksBought - 1,
+                        })
+                      }
+                      disabled={player.stacksBought <= 0}
+                      aria-label="Decrease stacks"
+                    >
+                      &minus;
+                    </button>
+                    <span className="stacks-count">{player.stacksBought}</span>
+                    <button
+                      className="btn-icon btn-step"
+                      onClick={() =>
+                        dispatch({
+                          type: "SET_STACKS_BOUGHT",
+                          playerId: player.id,
+                          stacks: player.stacksBought + 1,
+                        })
+                      }
+                      aria-label="Increase stacks"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="chips-input-wrapper">
                 <input
@@ -161,12 +215,12 @@ export default function CashoutScreen({ players, dispatch }: Props) {
 
       <button
         className="btn btn-primary btn-calculate"
-        onClick={openEndTimeModal}
+        onClick={editing ? () => dispatch({ type: "SAVE_EDIT" }) : openEndTimeModal}
       >
-        Calculate Results
+        {editing ? "Save Changes" : "Calculate Results"}
       </button>
 
-      {showEndTimeModal && (
+      {!editing && showEndTimeModal && (
         <div
           className="modal-overlay"
           onClick={() => !submitting && setShowEndTimeModal(false)}

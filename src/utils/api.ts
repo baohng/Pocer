@@ -1,5 +1,6 @@
 import type { Player } from "../types";
 import { CHIPS_PER_STACK, VND_PER_CHIP } from "../constants";
+import { getTotalBuyInVND } from "./results";
 
 export const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxtwxB0MVgEwbG6vkW6z2JQHl0VrhG35F8Og5tgt2EsuJCI3DTqixGsBYY-PNnswRSJrQ/exec";
@@ -26,12 +27,7 @@ export async function submitGameResult(
     return ((returned - boughtIn) * VND_PER_CHIP) / 1000;
   });
 
-  const totalBuyInK = players
-    .filter((p) => p.active)
-    .reduce(
-      (sum, p) => sum + (p.stacksBought * CHIPS_PER_STACK * VND_PER_CHIP) / 1000,
-      0
-    );
+  const totalBuyInK = getTotalBuyInVND(players) / 1000;
 
   const row = [totalBuyInK, formatEndTime(endTime), ...netsK];
 
