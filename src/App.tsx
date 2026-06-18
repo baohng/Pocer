@@ -1,5 +1,5 @@
 import { useReducer, useEffect } from "react";
-import type { Session, Action, Player, AppState, GameRecord } from "./types";
+import type { Session, Action, Player, AppState, GameRecord, BuyEntry } from "./types";
 import { saveAppState, loadAppState } from "./utils/storage";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
@@ -28,6 +28,8 @@ function createInitialSession(): Session {
   return {
     phase: "setup",
     players: DEFAULT_NAMES.map((name) => createPlayer(name)),
+    buyLog: [],
+    undoneEntry: null,
   };
 }
 
@@ -111,16 +113,25 @@ function gameReducer(state: Session, action: Action): Session {
         ),
       };
 
-    case "START_GAME":
+    case "START_GAME": {
+      const activePlayers = state.players.map((p) =>
+        p.active ? { ...p, stacksBought: 1 } : p
+      );
+      const initialLog: BuyEntry[] = activePlayers
+        .filter((p) => p.active)
+        .map((p) => ({ playerId: p.id, playerName: p.name }));
       return {
         ...state,
         phase: "playing",
-        players: state.players.map((p) =>
-          p.active ? { ...p, stacksBought: 1 } : p
-        ),
+        players: activePlayers,
+        buyLog: initialLog,
+        undoneEntry: null,
       };
+    }
 
-    case "BUY_STACK":
+    case "BUY_STACK": {
+      const buyingPlayer = state.players.find((p) => p.id === action.playerId);
+      if (!buyingPlayer) return state;
       return {
         ...state,
         players: state.players.map((p) =>
@@ -128,7 +139,13 @@ function gameReducer(state: Session, action: Action): Session {
             ? { ...p, stacksBought: p.stacksBought + 1 }
             : p
         ),
+        buyLog: [
+          ...state.buyLog,
+          { playerId: buyingPlayer.id, playerName: buyingPlayer.name },
+        ],
+        undoneEntry: null,
       };
+    }
 
     case "UNDO_BUY":
       return {
@@ -139,6 +156,38 @@ function gameReducer(state: Session, action: Action): Session {
             : p
         ),
       };
+
+    case "UNDO_LAST_BUY": {
+      if (state.buyLog.length === 0) return state;
+      const last = state.buyLog[state.buyLog.length - 1];
+      const targetPlayer = state.players.find((p) => p.id === last.playerId);
+      if (!targetPlayer || targetPlayer.stacksBought <= 1) return state;
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === last.playerId
+            ? { ...p, stacksBought: p.stacksBought - 1 }
+            : p
+        ),
+        buyLog: state.buyLog.slice(0, -1),
+        undoneEntry: last,
+      };
+    }
+
+    case "REDO_LAST_BUY": {
+      if (!state.undoneEntry) return state;
+      const entry = state.undoneEntry;
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === entry.playerId
+            ? { ...p, stacksBought: p.stacksBought + 1 }
+            : p
+        ),
+        buyLog: [...state.buyLog, entry],
+        undoneEntry: null,
+      };
+    }
 
     case "SET_STACKS_BOUGHT":
       return {
@@ -211,7 +260,7 @@ function appReducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         editingId: action.id,
-        current: { phase: "cashout", players: record.players },
+        current: { phase: "cashout", players: record.players, buyLog: [], undoneEntry: null },
       };
     }
 
@@ -298,7 +347,7 @@ function App() {
                   <SetupScreen players={session.players} dispatch={dispatch} />
                 )}
                 {session.phase === "playing" && (
-                  <PlayingScreen players={session.players} dispatch={dispatch} />
+                  <PlayingScreen players={session.players} buyLog={session.buyLog} undoneEntry={session.undoneEntry} dispatch={dispatch} />
                 )}
                 {session.phase === "cashout" && (
                   <CashoutScreen players={session.players} dispatch={dispatch} />

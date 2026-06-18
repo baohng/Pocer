@@ -1,36 +1,35 @@
 import { useState, useEffect, useRef, type Dispatch } from "react";
-import type { Player, Action } from "../types";
+import type { Player, Action, BuyEntry } from "../types";
 import { CHIPS_PER_STACK, VND_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
-import { useToast } from "./Toast";
 
 interface Props {
   players: Player[];
+  buyLog: BuyEntry[];
+  undoneEntry: BuyEntry | null;
   dispatch: Dispatch<Action>;
 }
 
-export default function PlayingScreen({ players, dispatch }: Props) {
+export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }: Props) {
   const activePlayers = players.filter((p) => p.active);
   const inactivePlayers = players.filter((p) => !p.active);
-  const [lastBuyId, setLastBuyId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const lastBuy = buyLog.length > 0 ? buyLog[buyLog.length - 1] : null;
+  const lastBuyPlayer = lastBuy
+    ? players.find((p) => p.id === lastBuy.playerId) ?? null
+    : null;
+  const canUndo = lastBuyPlayer !== null && lastBuyPlayer.stacksBought > 1;
+  const canRedo = undoneEntry !== null;
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [cashoutPlayerId, setCashoutPlayerId] = useState<string | null>(null);
   const [cashoutChips, setCashoutChips] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
   const cashoutInputRef = useRef<HTMLInputElement>(null);
-  const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
   const totalVND = totalStacks * VND_PER_STACK;
-
-  useEffect(() => {
-    if (!lastBuyId) return;
-    const timer = setTimeout(() => setLastBuyId(null), 4000);
-    return () => clearTimeout(timer);
-  }, [lastBuyId]);
 
   useEffect(() => {
     if (addPlayerOpen && addInputRef.current) {
@@ -46,13 +45,14 @@ export default function PlayingScreen({ players, dispatch }: Props) {
 
   function handleBuy(playerId: string) {
     dispatch({ type: "BUY_STACK", playerId });
-    setLastBuyId(playerId);
   }
 
-  function handleUndo(playerId: string, playerName: string) {
-    dispatch({ type: "UNDO_BUY", playerId });
-    setLastBuyId(null);
-    showToast(`Undo stack of ${playerName}`, "warning");
+  function handleUndoLast() {
+    dispatch({ type: "UNDO_LAST_BUY" });
+  }
+
+  function handleRedoLast() {
+    dispatch({ type: "REDO_LAST_BUY" });
   }
 
   function handleEndGame() {
@@ -126,6 +126,25 @@ export default function PlayingScreen({ players, dispatch }: Props) {
         </div>
       </div>
 
+      {(canUndo || canRedo) && (
+        <div className="undo-redo-bar">
+          <button
+            className="btn btn-undo btn-undo-global"
+            onClick={handleUndoLast}
+            disabled={!canUndo}
+          >
+            ↩ Undo{canUndo ? ` ${lastBuy!.playerName}` : ""}
+          </button>
+          <button
+            className="btn btn-redo btn-redo-global"
+            onClick={handleRedoLast}
+            disabled={!canRedo}
+          >
+            ↪ Redo{canRedo ? ` ${undoneEntry!.playerName}` : ""}
+          </button>
+        </div>
+      )}
+
       <div className="player-list">
         {activePlayers.map((player, i) => {
           const chips = player.stacksBought * CHIPS_PER_STACK;
@@ -181,14 +200,6 @@ export default function PlayingScreen({ players, dispatch }: Props) {
                 </div>
               ) : (
                 <div className="player-actions">
-                  {lastBuyId === player.id && player.stacksBought > 1 && (
-                    <button
-                      className="btn btn-undo"
-                      onClick={() => handleUndo(player.id, player.name)}
-                    >
-                      Undo
-                    </button>
-                  )}
                   <button
                     className="btn btn-buy"
                     onClick={() => handleBuy(player.id)}

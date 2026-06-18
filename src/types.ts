@@ -9,9 +9,16 @@ export interface Player {
 
 export type Phase = "setup" | "playing" | "cashout" | "summary";
 
+export interface BuyEntry {
+  playerId: string;
+  playerName: string;
+}
+
 export interface Session {
   phase: Phase;
   players: Player[];
+  buyLog: BuyEntry[]; // ordered oldest-first; pop from end to undo
+  undoneEntry: BuyEntry | null; // the single redoable entry
 }
 
 /** A finished game, snapshotted into history. */
@@ -42,6 +49,8 @@ export type Action =
   | { type: "START_GAME" }
   | { type: "BUY_STACK"; playerId: string }
   | { type: "UNDO_BUY"; playerId: string }
+  | { type: "UNDO_LAST_BUY" }
+  | { type: "REDO_LAST_BUY" }
   | { type: "SET_STACKS_BOUGHT"; playerId: string; stacks: number }
   | { type: "END_GAME" }
   | { type: "SET_CHIPS_RETURNED"; playerId: string; chips: number | null }

@@ -25,6 +25,8 @@ export function loadAppState(): AppState | null {
     if (data) {
       const state = JSON.parse(data) as AppState;
       state.current.players = migratePlayers(state.current.players);
+      state.current.buyLog = state.current.buyLog ?? [];
+      state.current.undoneEntry = state.current.undoneEntry ?? null;
       state.history = (state.history ?? []).map((g) => ({
         ...g,
         players: migratePlayers(g.players),
@@ -43,6 +45,8 @@ export function loadAppState(): AppState | null {
         return null;
       }
       session.players = migratePlayers(session.players);
+      session.buyLog = session.buyLog ?? [];
+      session.undoneEntry = session.undoneEntry ?? null;
       return {
         current: session,
         history: [],
