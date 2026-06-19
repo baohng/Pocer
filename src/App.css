@@ -50,7 +50,7 @@
   justify-content: center;
 }
 
-.share-qr img {
+.share-qr canvas {
   width: 220px;
   height: 220px;
   border-radius: var(--radius);

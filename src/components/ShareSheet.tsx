@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { Session } from "../types";
 import { encodeSession, type SharePayload } from "../utils/share";
@@ -11,8 +11,8 @@ interface Props {
 
 export default function ShareSheet({ session, onClose }: Props) {
   const [payload, setPayload] = useState<SharePayload | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -20,17 +20,21 @@ export default function ShareSheet({ session, onClose }: Props) {
     encodeSession(session)
       .then(async (p) => {
         if (cancelled) return;
-        const qr = await QRCode.toDataURL(p.url, {
+        setPayload(p);
+        // Draw QR after the canvas mounts (next microtask gives React time to render)
+        await Promise.resolve();
+        if (cancelled || !canvasRef.current) return;
+        await QRCode.toCanvas(canvasRef.current, p.url, {
           margin: 1,
-          width: 240,
+          width: 220,
           color: { dark: "#0f1115", light: "#ffffff" },
         });
-        if (cancelled) return;
-        setPayload(p);
-        setQrDataUrl(qr);
       })
-      .catch(() => {
-        if (!cancelled) setError("Could not generate share link.");
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("Share link error:", err);
+          setError("Could not generate share link.");
+        }
       });
     return () => {
       cancelled = true;
@@ -62,11 +66,9 @@ export default function ShareSheet({ session, onClose }: Props) {
           <p className="modal-message">Generating…</p>
         ) : (
           <>
-            {qrDataUrl && (
-              <div className="share-qr">
-                <img src={qrDataUrl} alt="QR code to join session" />
-              </div>
-            )}
+            <div className="share-qr">
+              <canvas ref={canvasRef} aria-label="QR code to join session" />
+            </div>
 
             <div className="share-code">Code: {payload.code}</div>
 
