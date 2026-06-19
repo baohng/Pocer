@@ -25,6 +25,146 @@
   color: var(--text-muted);
 }
 
+.btn-share {
+  margin-left: auto;
+  align-self: center;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+/* Share sheet */
+.share-sheet {
+  max-width: 360px;
+  text-align: center;
+}
+
+.share-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.share-qr {
+  display: flex;
+  justify-content: center;
+}
+
+.share-qr img {
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 8px;
+}
+
+.share-code {
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.share-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.share-link-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.share-note {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.share-error {
+  color: #ff6b6b;
+  font-size: 14px;
+}
+
+/* Join screen */
+.join-modal {
+  max-width: 360px;
+}
+
+.join-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+  text-align: center;
+}
+
+.join-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.join-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading);
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.join-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.join-player-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.join-player-name {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.join-player-stacks {
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.join-warning {
+  font-size: 13px;
+  color: #ffb454;
+  text-align: center;
+  margin: 0;
+}
+
 .app-main {
   flex: 1;
   padding: 16px 20px 32px;

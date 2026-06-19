@@ -63,4 +63,6 @@ export type Action =
   | { type: "EDIT_GAME"; id: string }
   | { type: "SAVE_EDIT" }
   | { type: "DELETE_GAME"; id: string }
-  | { type: "MARK_SUBMITTED"; id: string };
+  | { type: "MARK_SUBMITTED"; id: string }
+  // Sharing / handoff
+  | { type: "LOAD_SHARED_SESSION"; session: Session };

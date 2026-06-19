@@ -1,11 +1,14 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import type { Session, Action, Player, AppState, GameRecord, BuyEntry } from "./types";
 import { saveAppState, loadAppState } from "./utils/storage";
+import { readJoinTokenFromUrl, decodeSession, clearJoinTokenFromUrl } from "./utils/share";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
 import HistoryScreen from "./components/HistoryScreen";
+import JoinScreen from "./components/JoinScreen";
+import ShareSheet from "./components/ShareSheet";
 import { ToastProvider } from "./components/Toast";
 import "./App.css";
 
@@ -295,6 +298,17 @@ function appReducer(state: AppState, action: Action): AppState {
         ),
       };
 
+    case "LOAD_SHARED_SESSION":
+      // Take over a session shared via link. Replaces the current session;
+      // history is preserved on the receiver's device (only current session
+      // travels in the link). Close any open history/edit views.
+      return {
+        ...state,
+        current: action.session,
+        editingId: null,
+        viewingHistory: false,
+      };
+
     default:
       return { ...state, current: gameReducer(state.current, action) };
   }
@@ -307,11 +321,62 @@ function App() {
     () => loadAppState() ?? createInitialAppState()
   );
 
+  // A session shared via #join= link, awaiting the user's "Take over" confirm.
+  const [pendingShare, setPendingShare] = useState<Session | null>(null);
+  // Captured once on mount: was there a join token in the URL? Drives the
+  // initial "decoding…" state without a synchronous setState in an effect.
+  const [hadJoinToken] = useState(() => readJoinTokenFromUrl() !== null);
+  const [decodingShare, setDecodingShare] = useState(hadJoinToken);
+  // True if a join token was present but failed verification/shape.
+  const [shareError, setShareError] = useState(false);
+
   useEffect(() => {
     saveAppState(state);
   }, [state]);
 
+  // On mount, check for a shared-session token in the URL fragment.
+  useEffect(() => {
+    if (!hadJoinToken) return;
+    const token = readJoinTokenFromUrl();
+    if (!token) return;
+    let cancelled = false;
+    decodeSession(token).then((session) => {
+      if (cancelled) return;
+      setDecodingShare(false);
+      if (session) {
+        setPendingShare(session);
+      } else {
+        setShareError(true);
+        clearJoinTokenFromUrl();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hadJoinToken]);
+
+  function handleTakeOver() {
+    if (pendingShare) {
+      dispatch({ type: "LOAD_SHARED_SESSION", session: pendingShare });
+      setPendingShare(null);
+      clearJoinTokenFromUrl();
+    }
+  }
+
+  function handleDeclineShare() {
+    setPendingShare(null);
+    clearJoinTokenFromUrl();
+  }
+
+  function handleDismissShareError() {
+    setShareError(false);
+  }
+
+  const [showShare, setShowShare] = useState(false);
+
   const { current: session, history, editingId, viewingHistory } = state;
+  const canShare =
+    !editingId && !viewingHistory && (session.phase === "playing" || session.phase === "cashout");
   const editingRecord = editingId
     ? history.find((g) => g.id === editingId) ?? null
     : null;
@@ -329,6 +394,15 @@ function App() {
         <header className="app-header">
           <h1>Pocer</h1>
           <span className="app-subtitle">Poker Calculator</span>
+          {canShare && (
+            <button
+              className="btn btn-secondary btn-share"
+              onClick={() => setShowShare(true)}
+              aria-label="Share session"
+            >
+              Share
+            </button>
+          )}
         </header>
         <main className="app-main">
           <div className="screen-wrapper" key={viewKey}>
@@ -359,6 +433,42 @@ function App() {
             )}
           </div>
         </main>
+
+        {decodingShare && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <p className="modal-message">Loading shared session…</p>
+            </div>
+          </div>
+        )}
+
+        {shareError && (
+          <div className="modal-overlay" onClick={handleDismissShareError}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <p className="modal-message">
+                This share link is invalid or has been tampered with.
+              </p>
+              <div className="modal-actions">
+                <button className="btn btn-primary" onClick={handleDismissShareError}>
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingShare && (
+          <JoinScreen
+            session={pendingShare}
+            hasExistingSession={session.phase !== "setup" || session.players.some((p) => p.stacksBought > 0)}
+            onTakeOver={handleTakeOver}
+            onDecline={handleDeclineShare}
+          />
+        )}
+
+        {showShare && (
+          <ShareSheet session={session} onClose={() => setShowShare(false)} />
+        )}
       </div>
     </ToastProvider>
   );
