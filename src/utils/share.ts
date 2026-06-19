@@ -104,11 +104,13 @@ export interface SharePayload {
 /** Serialize + sign the session and build a shareable URL.
  *  Only the current session travels — history stays on the sender's device. */
 export async function encodeSession(session: Session): Promise<SharePayload> {
+  // Omit buyLog and undoneEntry — receiver only needs current state, not history.
+  // This keeps the payload small enough to fit in a QR code.
   const json = JSON.stringify({
     phase: session.phase,
     players: session.players,
-    buyLog: session.buyLog,
-    undoneEntry: session.undoneEntry,
+    buyLog: [],
+    undoneEntry: null,
   });
   const payloadBytes = new TextEncoder().encode(json);
 
