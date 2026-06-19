@@ -8,47 +8,54 @@ const SHARE_SECRET = "pocer-share-v1-7f3a9b2e";
 
 const JOIN_PREFIX = "join=";
 
-/** Migrate a decoded player payload so a link shared from an older app version
- *  still loads — mirrors the migration-on-load pattern in storage.ts. */
-function migratePlayers(players: unknown[]): Player[] {
-  return players.map((p) => {
-    const player = p as Partial<Player>;
-    return {
-      id: String(player.id ?? crypto.randomUUID()),
-      name: String(player.name ?? "Player"),
-      active: player.active ?? true,
-      stacksBought: Number(player.stacksBought ?? 0),
-      chipsReturned:
-        player.chipsReturned === null || player.chipsReturned === undefined
-          ? null
-          : Number(player.chipsReturned),
-      cashedOut: player.cashedOut ?? false,
-    };
-  });
+// Compact wire format: arrays instead of objects, short phase codes.
+// ph: 1=playing, 2=cashout
+// pl: [name, active(0|1), stacksBought, chipsReturned(-1=null), cashedOut(0|1)]
+type CompactPlayer = [string, 0 | 1, number, number, 0 | 1];
+interface CompactPayload {
+  ph: 1 | 2;
+  pl: CompactPlayer[];
 }
 
-/** Shape-check + migrate a raw decoded session. Returns null if invalid. */
-function normalizeSession(raw: unknown): Session | null {
+function toCompact(session: Session): CompactPayload {
+  return {
+    ph: session.phase === "cashout" ? 2 : 1,
+    pl: session.players.map((p) => [
+      p.name,
+      p.active ? 1 : 0,
+      p.stacksBought,
+      p.chipsReturned === null ? -1 : p.chipsReturned,
+      p.cashedOut ? 1 : 0,
+    ]),
+  };
+}
+
+function fromCompact(raw: unknown): Session | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
-  if (!Array.isArray(obj.players) || obj.players.length < 2) return null;
+  if (obj.ph !== 1 && obj.ph !== 2) return null;
+  if (!Array.isArray(obj.pl) || obj.pl.length < 2) return null;
 
-  const phase = obj.phase as Session["phase"];
-  if (phase !== "setup" && phase !== "playing" && phase !== "cashout" && phase !== "summary") {
-    return null;
-  }
+  const phase: Session["phase"] = obj.ph === 2 ? "cashout" : "playing";
+  const players: (Player | null)[] = obj.pl.map((row: unknown) => {
+    if (!Array.isArray(row) || row.length < 5) return null;
+    return {
+      id: crypto.randomUUID(),
+      name: String(row[0] ?? "Player"),
+      active: row[1] === 1,
+      stacksBought: Number(row[2] ?? 0),
+      chipsReturned: row[3] === -1 ? null : Number(row[3]),
+      cashedOut: row[4] === 1,
+    };
+  });
 
-  const buyLog = Array.isArray(obj.buyLog) ? obj.buyLog : [];
-  const undoneEntry =
-    obj.undoneEntry && typeof obj.undoneEntry === "object"
-      ? (obj.undoneEntry as Session["undoneEntry"])
-      : null;
+  if (players.some((p) => p === null)) return null;
 
   return {
     phase,
-    players: migratePlayers(obj.players),
-    buyLog,
-    undoneEntry,
+    players: players as Player[],
+    buyLog: [],
+    undoneEntry: null,
   };
 }
 
@@ -102,16 +109,10 @@ export interface SharePayload {
 }
 
 /** Serialize + sign the session and build a shareable URL.
- *  Only the current session travels — history stays on the sender's device. */
+ *  Only the current session travels — history stays on the sender's device.
+ *  Uses a compact array format to keep the QR code scannable. */
 export async function encodeSession(session: Session): Promise<SharePayload> {
-  // Omit buyLog and undoneEntry — receiver only needs current state, not history.
-  // This keeps the payload small enough to fit in a QR code.
-  const json = JSON.stringify({
-    phase: session.phase,
-    players: session.players,
-    buyLog: [],
-    undoneEntry: null,
-  });
+  const json = JSON.stringify(toCompact(session));
   const payloadBytes = new TextEncoder().encode(json);
 
   const key = await hmacKey();
@@ -159,7 +160,7 @@ export async function decodeSession(token: string): Promise<Session | null> {
   } catch {
     return null;
   }
-  return normalizeSession(parsed);
+  return fromCompact(parsed);
 }
 
 /** Strip the `#join=...` fragment from the current URL so a refresh or
