@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, type Dispatch } from "react";
 import type { Player, Action, BuyEntry } from "../types";
 import { CHIPS_PER_STACK, VND_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
-import { useToast } from "./Toast";
 import SeatingChart from "./SeatingChart";
 
 interface Props {
@@ -31,7 +30,6 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
   const [cashoutChips, setCashoutChips] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
   const cashoutInputRef = useRef<HTMLInputElement>(null);
-  const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
@@ -63,7 +61,6 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
 
   function handleShuffleSeats() {
     dispatch({ type: "SHUFFLE_SEATS" });
-    showToast("Seats reshuffled", "success");
   }
 
   function handleEndGame() {
