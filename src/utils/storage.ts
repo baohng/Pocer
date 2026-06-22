@@ -8,6 +8,7 @@ function migratePlayers(players: Player[]): Player[] {
     ...p,
     active: p.active ?? true,
     cashedOut: p.cashedOut ?? false,
+    seat: p.seat ?? null,
   }));
 }
 

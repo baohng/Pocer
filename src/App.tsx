@@ -24,7 +24,20 @@ function createPlayer(name: string): Player {
     stacksBought: 0,
     chipsReturned: null,
     cashedOut: false,
+    seat: null,
   };
+}
+
+/** Assign random 1-based seats to the active players; inactive get null. */
+function assignRandomSeats(players: Player[]): Player[] {
+  const activeIds = players.filter((p) => p.active).map((p) => p.id);
+  // Fisher–Yates shuffle of the active ids → seat order.
+  for (let i = activeIds.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [activeIds[i], activeIds[j]] = [activeIds[j], activeIds[i]];
+  }
+  const seatById = new Map(activeIds.map((id, i) => [id, i + 1]));
+  return players.map((p) => ({ ...p, seat: seatById.get(p.id) ?? null }));
 }
 
 function createInitialSession(): Session {
@@ -126,11 +139,14 @@ function gameReducer(state: Session, action: Action): Session {
       return {
         ...state,
         phase: "playing",
-        players: activePlayers,
+        players: assignRandomSeats(activePlayers),
         buyLog: initialLog,
         undoneEntry: null,
       };
     }
+
+    case "SHUFFLE_SEATS":
+      return { ...state, players: assignRandomSeats(state.players) };
 
     case "BUY_STACK": {
       const buyingPlayer = state.players.find((p) => p.id === action.playerId);

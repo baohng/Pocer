@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, type Dispatch } from "react";
 import type { Player, Action, BuyEntry } from "../types";
 import { CHIPS_PER_STACK, VND_PER_STACK } from "../constants";
 import { formatChips } from "../utils/format";
+import { useToast } from "./Toast";
+import SeatingChart from "./SeatingChart";
 
 interface Props {
   players: Player[];
@@ -11,8 +13,11 @@ interface Props {
 }
 
 export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }: Props) {
-  const activePlayers = players.filter((p) => p.active);
+  const activePlayers = players
+    .filter((p) => p.active)
+    .sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0));
   const inactivePlayers = players.filter((p) => !p.active);
+  const [seatsRevealed, setSeatsRevealed] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const lastBuy = buyLog.length > 0 ? buyLog[buyLog.length - 1] : null;
   const lastBuyPlayer = lastBuy
@@ -26,6 +31,7 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
   const [cashoutChips, setCashoutChips] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
   const cashoutInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   const totalStacks = activePlayers.reduce((sum, p) => sum + p.stacksBought, 0);
   const totalChips = totalStacks * CHIPS_PER_STACK;
@@ -55,8 +61,34 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
     dispatch({ type: "REDO_LAST_BUY" });
   }
 
+  function handleShuffleSeats() {
+    dispatch({ type: "SHUFFLE_SEATS" });
+    showToast("Seats reshuffled", "success");
+  }
+
   function handleEndGame() {
     setShowConfirm(true);
+  }
+
+  if (!seatsRevealed) {
+    return (
+      <div className="screen seating-reveal-screen">
+        <div className="section-header">
+          <h2>Random Seating</h2>
+        </div>
+        <p className="seating-subtitle">Table is against the wall</p>
+        <SeatingChart players={activePlayers} />
+        <button className="btn btn-secondary btn-shuffle-full" onClick={handleShuffleSeats}>
+          🎲 Shuffle seats
+        </button>
+        <button
+          className="btn btn-primary btn-start"
+          onClick={() => setSeatsRevealed(true)}
+        >
+          Continue to Buy-in
+        </button>
+      </div>
+    );
   }
 
   function confirmEndGame() {
@@ -155,6 +187,9 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
               style={{ animationDelay: `${i * 0.04}s` }}>
               <div className="player-info">
                 <span className="player-name">
+                  {player.seat !== null && (
+                    <span className="seat-badge">{player.seat}</span>
+                  )}
                   {player.name}
                   {player.cashedOut && <span className="badge-left">Left</span>}
                 </span>

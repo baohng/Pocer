@@ -1197,3 +1197,133 @@
   text-align: center;
   font-weight: 600;
 }
+
+/* --- Seating chart --- */
+.seating-section {
+  margin-top: 4px;
+}
+
+.seating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.seating-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.btn-shuffle {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.seating-chart {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* The wall the table is pushed against (top edge). */
+.seating-wall {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 2%;
+  height: 4px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--border) 0,
+    var(--border) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+/* Table hugs the top wall; seats wrap the other three sides. */
+.seating-table {
+  position: absolute;
+  left: 28%;
+  top: 6%;
+  width: 44%;
+  height: 66%;
+  background: var(--green-bg);
+  border: 2px solid var(--green);
+  border-radius: 14px 14px 40px 40px;
+}
+
+.seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 16%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: var(--bg-card);
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  text-align: center;
+  overflow: hidden;
+}
+
+.seat-number {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+
+.seat-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-heading);
+  line-height: 1.05;
+  max-width: 100%;
+  padding: 0 2px;
+  word-break: break-word;
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  background: var(--green-bg);
+  border-radius: 9px;
+  vertical-align: middle;
+}
+
+/* --- Seating reveal screen --- */
+.seating-reveal-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.seating-subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: -4px 0 12px;
+}
+
+.btn-shuffle-full {
+  width: 100%;
+  margin-top: 16px;
+}

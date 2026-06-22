@@ -46,6 +46,7 @@ function fromCompact(raw: unknown): Session | null {
       stacksBought: Number(row[2] ?? 0),
       chipsReturned: row[3] === -1 ? null : Number(row[3]),
       cashedOut: row[4] === 1,
+      seat: null,
     };
   });
 

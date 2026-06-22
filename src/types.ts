@@ -5,6 +5,7 @@ export interface Player {
   stacksBought: number;
   chipsReturned: number | null;
   cashedOut: boolean;
+  seat: number | null; // 1-based seat assigned at game start; null until then
 }
 
 export type Phase = "setup" | "playing" | "cashout" | "summary";
@@ -47,6 +48,7 @@ export type Action =
   | { type: "EARLY_CASHOUT"; playerId: string; chips: number }
   | { type: "UNDO_EARLY_CASHOUT"; playerId: string }
   | { type: "START_GAME" }
+  | { type: "SHUFFLE_SEATS" }
   | { type: "BUY_STACK"; playerId: string }
   | { type: "UNDO_BUY"; playerId: string }
   | { type: "UNDO_LAST_BUY" }
