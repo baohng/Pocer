@@ -13,7 +13,7 @@ import { ToastProvider } from "./components/Toast";
 import "./App.css";
 
 const DEFAULT_NAMES = [
-  "Đạt", "Hải", "Bình", "Đông", "Mạnh", "Phúc", "Hiếu", "Bảo",
+  "Đạt", "Hải", "Bình", "Đông", "bé Đào", "Phúc", "Hiếu", "Bảo", "Tuấn Anh",
 ];
 
 function createPlayer(name: string): Player {
