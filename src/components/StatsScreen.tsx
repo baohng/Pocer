@@ -347,10 +347,10 @@ export default function StatsScreen({ history, dispatch }: Props) {
               ))}
               {insightMeta && (
                 <p className="ai-footer">
-                  {insightMeta.model === "mock"
-                    ? "bản mock — chưa cấu hình DEEPSEEK_API_KEY"
-                    : insightMeta.model}
-                  {" · "}
+                  {/* The model name is still returned and stored, just not shown.
+                      Mock output stays flagged -- otherwise a placeholder summary
+                      is indistinguishable from a real one. */}
+                  {insightMeta.model === "mock" && "bản mock — chưa cấu hình DEEPSEEK_API_KEY · "}
                   {new Date(insightMeta.createdAt).toLocaleString("vi-VN")}
                 </p>
               )}
