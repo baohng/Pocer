@@ -1,5 +1,10 @@
-import { BadRequestError, generateInsight } from "./_insight-core";
-import { clientIp, rateLimit } from "./_rate-limit";
+import { BadRequestError, generateInsight } from "./_insight-core.js";
+import { clientIp, rateLimit } from "./_rate-limit.js";
+
+// The edge runtime exposes process.env for configured variables, but this
+// directory is type-checked without @types/node -- and shouldn't pull them in,
+// since none of the rest of Node's API is available here.
+declare const process: { env: Record<string, string | undefined> };
 
 // Edge runtime: the handler is a plain Request -> Response function, which is
 // the same shape the Vite dev middleware emulates, so dev and prod run one

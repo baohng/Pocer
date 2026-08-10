@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "target": "es2023",
+    /* Web APIs only: the functions run on the edge runtime, not on Node, so
+       Request/Response/fetch are in scope and Node's API deliberately is not. */
+    "lib": ["ES2023", "DOM"],
+    /* Matches how Vercel type-checks this directory. Keeping it in sync is the
+       whole point of this file -- `npm run build` failing locally is much
+       cheaper than a red deploy. */
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": [],
+    "skipLibCheck": true,
+
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["api"]
+}

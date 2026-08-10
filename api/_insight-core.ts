@@ -2,11 +2,14 @@
 // both the Vercel function (api/insight.ts) and the Vite dev middleware
 // (vite.config.ts) can call it directly. The `_` prefix keeps Vercel from
 // routing it as an endpoint of its own.
-//
-// Type-only imports of client code: erased at build time, so this file carries
-// no runtime dependency on the React app or on Supabase.
-import type { MonthFacts, PlayerFacts, SessionResult } from "../src/utils/analytics";
-import type { Insight, InsightRequest, InsightResponse } from "../src/utils/insight";
+import type {
+  Insight,
+  InsightRequest,
+  InsightResponse,
+  MonthFacts,
+  PlayerFacts,
+  SessionResult,
+} from "./_types.js";
 
 type Env = Record<string, string | undefined>;
 
