@@ -1,7 +1,6 @@
-import type { AppState, Session, Player } from "../types";
+import type { Session, Player } from "../types";
 
-const STORAGE_KEY = "pocer_session_v3";
-const LEGACY_KEY = "pocer_session_v2";
+const STORAGE_KEY = "pocer_session_v4";
 
 function migratePlayers(players: Player[]): Player[] {
   return players.map((p) => ({
@@ -12,58 +11,28 @@ function migratePlayers(players: Player[]): Player[] {
   }));
 }
 
-export function saveAppState(state: AppState): void {
+/** Persists only the in-progress game to sessionStorage, so a reload
+ *  doesn't lose it but it doesn't outlive the tab either. Finished-game
+ *  history lives in Supabase (see utils/supabaseSync.ts) -- the app no
+ *  longer depends on localStorage at all. */
+export function saveCurrentSession(session: Session): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   } catch {
-    // localStorage full or unavailable - silently ignore
+    // sessionStorage full or unavailable - silently ignore
   }
 }
 
-export function loadAppState(): AppState | null {
+export function loadCurrentSession(): Session | null {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const state = JSON.parse(data) as AppState;
-      state.current.players = migratePlayers(state.current.players);
-      state.current.buyLog = state.current.buyLog ?? [];
-      state.current.undoneEntry = state.current.undoneEntry ?? null;
-      state.history = (state.history ?? []).map((g) => ({
-        ...g,
-        players: migratePlayers(g.players),
-      }));
-      state.editingId = state.editingId ?? null;
-      state.viewingHistory = state.viewingHistory ?? false;
-      state.viewingStats = state.viewingStats ?? false;
-      return state;
-    }
-
-    // Migrate a legacy single-session save (pocer_session_v2).
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if (legacy) {
-      const session = JSON.parse(legacy) as Session;
-      // Pre-history saves stuck on the removed "mode" phase had no players.
-      if ((session.phase as string) === "mode" || session.players.length === 0) {
-        return null;
-      }
-      session.players = migratePlayers(session.players);
-      session.buyLog = session.buyLog ?? [];
-      session.undoneEntry = session.undoneEntry ?? null;
-      return {
-        current: session,
-        history: [],
-        editingId: null,
-        viewingHistory: false,
-        viewingStats: false,
-      };
-    }
-
-    return null;
+    const data = sessionStorage.getItem(STORAGE_KEY);
+    if (!data) return null;
+    const session = JSON.parse(data) as Session;
+    session.players = migratePlayers(session.players);
+    session.buyLog = session.buyLog ?? [];
+    session.undoneEntry = session.undoneEntry ?? null;
+    return session;
   } catch {
     return null;
   }
-}
-
-export function clearAppState(): void {
-  localStorage.removeItem(STORAGE_KEY);
 }

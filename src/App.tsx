@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState } from "react";
 import type { Session, Action, Player, AppState, GameRecord, BuyEntry } from "./types";
-import { saveAppState, loadAppState } from "./utils/storage";
+import { saveCurrentSession, loadCurrentSession } from "./utils/storage";
 import { readJoinTokenFromUrl, decodeSession, clearJoinTokenFromUrl } from "./utils/share";
 import {
   fetchRemoteHistory,
@@ -380,11 +380,11 @@ function appReducer(state: AppState, action: Action): AppState {
 }
 
 function App() {
-  const [state, dispatch] = useReducer(
-    appReducer,
-    null,
-    () => loadAppState() ?? createInitialAppState()
-  );
+  const [state, dispatch] = useReducer(appReducer, null, () => {
+    const restored = loadCurrentSession();
+    const initial = createInitialAppState();
+    return restored ? { ...initial, current: restored } : initial;
+  });
 
   // A session shared via #join= link, awaiting the user's "Take over" confirm.
   const [pendingShare, setPendingShare] = useState<Session | null>(null);
@@ -396,7 +396,7 @@ function App() {
   const [shareError, setShareError] = useState(false);
 
   useEffect(() => {
-    saveAppState(state);
+    saveCurrentSession(state.current);
   }, [state]);
 
   // On mount, pull remote history from Supabase and merge it in (no-op if

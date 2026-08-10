@@ -28,7 +28,10 @@ All mutations go through the reducer's `Action` union — don't mutate session s
 
 ### Persistence
 
-Every reducer update is mirrored to `localStorage` under key `pocer_session_v2` via a `useEffect` in `App.tsx` calling `utils/storage.ts`. On mount, the reducer's lazy initializer rehydrates from storage and backfills `active: true` for sessions saved before that field existed — preserve this migration-on-load pattern when adding new fields to `Player` or `Session`.
+The app does not use `localStorage`. Two separate mechanisms cover the two kinds of state:
+
+- **In-progress game** (`state.current`): mirrored to `sessionStorage` under key `pocer_session_v4` via a `useEffect` in `App.tsx` calling `utils/storage.ts`. This only survives a reload of the same tab — closing the tab loses it. On mount, the reducer's lazy initializer rehydrates from storage and backfills fields like `active`/`cashedOut`/`seat` for sessions saved before they existed — preserve this migration-on-load pattern when adding new fields to `Player` or `Session`.
+- **Finished-game history** (`state.history`): lives in Supabase (`game_records` table), synced via `utils/supabaseSync.ts`. On mount, `App.tsx` fetches remote history and merges it in (`MERGE_REMOTE_HISTORY`); local history edits are pushed back up by a diff effect. If Supabase isn't configured, history is simply empty for that session — there is no local fallback.
 
 ### Money math
 
