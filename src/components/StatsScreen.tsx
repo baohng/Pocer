@@ -156,26 +156,28 @@ export default function StatsScreen({ history, dispatch }: Props) {
           </div>
 
           <div className="stats-legend">
-            {series.map((s, i) => {
-              const last = s.points[s.points.length - 1]?.cumulative ?? 0;
-              const isHidden = hidden.has(s.name);
-              return (
-                <button
-                  key={s.name}
-                  className={`stats-legend-item${isHidden ? " dimmed" : ""}`}
-                  onClick={() => toggle(s.name)}
-                >
-                  <span
-                    className="stats-legend-dot"
-                    style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
-                  />
-                  <span className="stats-legend-name">{s.name}</span>
-                  <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>
-                    {formatVND(last)}
-                  </span>
-                </button>
-              );
-            })}
+            {series
+              .map((s, i) => ({ s, i, last: s.points[s.points.length - 1]?.cumulative ?? 0 }))
+              .sort((a, b) => b.last - a.last)
+              .map(({ s, i, last }) => {
+                const isHidden = hidden.has(s.name);
+                return (
+                  <button
+                    key={s.name}
+                    className={`stats-legend-item${isHidden ? " dimmed" : ""}`}
+                    onClick={() => toggle(s.name)}
+                  >
+                    <span
+                      className="stats-legend-dot"
+                      style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
+                    />
+                    <span className="stats-legend-name">{s.name}</span>
+                    <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>
+                      {formatVND(last)}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
         </>
       )}
