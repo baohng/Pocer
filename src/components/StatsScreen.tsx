@@ -11,6 +11,7 @@ import {
 import type { GameRecord, Action } from "../types";
 import { buildNetWorthSeries, groupGamesByAccountingMonth } from "../utils/history";
 import { formatVND } from "../utils/format";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 interface Props {
   history: GameRecord[];
@@ -23,9 +24,11 @@ const LINE_COLORS = [
   "#f97316", "#84cc16",
 ];
 
-const POINT_WIDTH = 56; // px per session column, drives horizontal scroll
+const POINT_WIDTH = 56; // px per session column, drives horizontal scroll on mobile
+const WIDE_QUERY = "(min-width: 900px)";
 
 export default function StatsScreen({ history, dispatch }: Props) {
+  const isWide = useMediaQuery(WIDE_QUERY);
   const monthGroups = useMemo(() => groupGamesByAccountingMonth(history), [history]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -108,22 +111,28 @@ export default function StatsScreen({ history, dispatch }: Props) {
       {pointCount === 0 ? (
         <p className="history-empty">No finished games this month.</p>
       ) : (
-        <>
+        <div className="stats-body">
           <div className="stats-chart-scroll">
-            <div style={{ width: chartWidth, height: 320 }}>
+            {/* On a wide screen the chart fills the column; on mobile it keeps a
+                fixed per-point width and the wrapper scrolls horizontally. */}
+            <div style={{ width: isWide ? "100%" : chartWidth, height: isWide ? 480 : 320 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 8, right: isWide ? 24 : 12, bottom: 0, left: isWide ? 4 : -12 }}
+                >
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
                   <XAxis
                     dataKey="label"
                     stroke="var(--text-muted)"
-                    fontSize={11}
+                    fontSize={isWide ? 13 : 11}
                     tickLine={false}
                   />
                   <YAxis
                     stroke="var(--text-muted)"
-                    fontSize={11}
+                    fontSize={isWide ? 13 : 11}
                     tickLine={false}
+                    width={isWide ? 64 : undefined}
                     tickFormatter={(v: number) => `${Math.round(v / 1000)}k`}
                   />
                   <Tooltip
@@ -180,7 +189,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                 );
               })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

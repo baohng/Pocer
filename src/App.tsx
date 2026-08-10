@@ -479,6 +479,13 @@ function App() {
     ? history.find((g) => g.id === editingId) ?? null
     : null;
 
+  // The stats chart is the one screen that benefits from a wide viewport, so it
+  // opts out of the app-wide 480px cap (see the .wide-view rules in App.css).
+  useEffect(() => {
+    document.body.classList.toggle("wide-view", viewingStats);
+    return () => document.body.classList.remove("wide-view");
+  }, [viewingStats]);
+
   // Render key so the entry-animation re-runs when the view changes.
   const viewKey = editingId
     ? `edit-${editingId}`

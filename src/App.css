@@ -1432,3 +1432,45 @@
 .stats-legend-value.loser {
   color: var(--red);
 }
+
+/* Stats on laptop/desktop: the one screen that breaks the 480px mobile cap.
+   `body.wide-view` is toggled by App.tsx while the stats screen is open. */
+@media (min-width: 900px) {
+  body.wide-view #root {
+    max-width: 1080px;
+  }
+
+  body.wide-view .app-main {
+    padding: 24px 32px 48px;
+  }
+
+  .stats-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .stats-chart-scroll {
+    overflow-x: visible;
+    margin: 8px 0 0;
+    padding: 0;
+  }
+
+  .stats-legend {
+    margin-top: 8px;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
+  }
+
+  .stats-legend-item {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .stats-month-nav {
+    margin-top: 16px;
+  }
+}
