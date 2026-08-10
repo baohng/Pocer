@@ -1341,6 +1341,39 @@
 
 /* Stats screen */
 
+.stats-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.stats-month-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stats-month-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stats-month-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-heading);
+  min-width: 64px;
+  text-align: center;
+}
+
 .stats-chart-scroll {
   overflow-x: auto;
   margin: 16px -20px 0;

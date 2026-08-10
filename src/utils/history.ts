@@ -12,6 +12,55 @@ export interface PlayerNetWorthSeries {
   points: NetWorthPoint[];
 }
 
+const VNT_OFFSET_MS = 7 * 60 * 60 * 1000; // Vietnam time is UTC+7, no DST
+
+/** The friend group's accounting month rolls over at 2pm VNT on the 25th
+ *  (mirrors the sheet-naming rule in utils/api.ts, but computed precisely
+ *  from the UTC instant rather than the device's local clock). Returns a
+ *  "M/YYYY" key, e.g. games from 25/07 14:00 VNT through 25/08 13:59 VNT
+ *  both key to "8/2026". */
+export function getAccountingMonthKey(iso: string): string {
+  const vnt = new Date(new Date(iso).getTime() + VNT_OFFSET_MS);
+  let month = vnt.getUTCMonth();
+  let year = vnt.getUTCFullYear();
+  const day = vnt.getUTCDate();
+  const hour = vnt.getUTCHours();
+  if (day > 25 || (day === 25 && hour >= 14)) {
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+  }
+  return `${month + 1}/${year}`;
+}
+
+function monthKeySortValue(key: string): number {
+  const [m, y] = key.split("/").map(Number);
+  return y * 12 + m;
+}
+
+/** Groups finished games into accounting-month buckets, keyed by
+ *  {@link getAccountingMonthKey}, with games in chronological order
+ *  within each bucket and buckets returned oldest-first. */
+export function groupGamesByAccountingMonth(
+  history: GameRecord[]
+): { key: string; games: GameRecord[] }[] {
+  const games = [...history].sort(
+    (a, b) => new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
+  );
+  const map = new Map<string, GameRecord[]>();
+  for (const g of games) {
+    const key = getAccountingMonthKey(g.endTime);
+    const arr = map.get(key);
+    if (arr) arr.push(g);
+    else map.set(key, [g]);
+  }
+  return Array.from(map.entries())
+    .map(([key, games]) => ({ key, games }))
+    .sort((a, b) => monthKeySortValue(a.key) - monthKeySortValue(b.key));
+}
+
 function formatDayLabel(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");

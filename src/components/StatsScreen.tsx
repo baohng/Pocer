@@ -9,7 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import type { GameRecord, Action } from "../types";
-import { buildNetWorthSeries } from "../utils/history";
+import { buildNetWorthSeries, groupGamesByAccountingMonth } from "../utils/history";
 import { formatVND } from "../utils/format";
 
 interface Props {
@@ -26,8 +26,25 @@ const LINE_COLORS = [
 const POINT_WIDTH = 56; // px per session column, drives horizontal scroll
 
 export default function StatsScreen({ history, dispatch }: Props) {
-  const series = useMemo(() => buildNetWorthSeries(history), [history]);
+  const monthGroups = useMemo(() => groupGamesByAccountingMonth(history), [history]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const selectedIndex = selectedKey
+    ? monthGroups.findIndex((g) => g.key === selectedKey)
+    : -1;
+  const activeIndex = selectedIndex === -1 ? monthGroups.length - 1 : selectedIndex;
+  const activeGroup = monthGroups[activeIndex];
+  const monthGames = useMemo(() => activeGroup?.games ?? [], [activeGroup]);
+
+  const series = useMemo(() => buildNetWorthSeries(monthGames), [monthGames]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  function goPrevMonth() {
+    if (activeIndex > 0) setSelectedKey(monthGroups[activeIndex - 1].key);
+  }
+  function goNextMonth() {
+    if (activeIndex < monthGroups.length - 1) setSelectedKey(monthGroups[activeIndex + 1].key);
+  }
 
   function toggle(name: string) {
     setHidden((prev) => {
@@ -63,11 +80,33 @@ export default function StatsScreen({ history, dispatch }: Props) {
           ← Back
         </button>
         <h2>Net Worth</h2>
-        <span className="player-count">{history.length} games</span>
+        <span className="player-count">{monthGames.length} games</span>
       </div>
 
+      {monthGroups.length > 0 && (
+        <div className="stats-month-nav">
+          <button
+            className="stats-month-btn"
+            onClick={goPrevMonth}
+            disabled={activeIndex <= 0}
+            aria-label="Previous month"
+          >
+            ‹
+          </button>
+          <span className="stats-month-label">{activeGroup?.key ?? ""}</span>
+          <button
+            className="stats-month-btn"
+            onClick={goNextMonth}
+            disabled={activeIndex >= monthGroups.length - 1}
+            aria-label="Next month"
+          >
+            ›
+          </button>
+        </div>
+      )}
+
       {pointCount === 0 ? (
-        <p className="history-empty">No finished games yet.</p>
+        <p className="history-empty">No finished games this month.</p>
       ) : (
         <>
           <div className="stats-chart-scroll">
