@@ -83,7 +83,9 @@ function buildLabels(games: GameRecord[]): string[] {
  *  already tracks by hand in a spreadsheet. Players are matched by name
  *  (not id, since each session re-creates player ids); a player absent or
  *  inactive in a given game contributes 0 to that game's step, carrying
- *  their running total forward flat. */
+ *  their running total forward flat. Every line is prefixed with a
+ *  synthetic "Start" point at 0 so lines always originate from the zero
+ *  baseline instead of jumping straight to the first game's result. */
 export function buildNetWorthSeries(history: GameRecord[]): PlayerNetWorthSeries[] {
   const games = [...history].sort(
     (a, b) => new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
@@ -97,15 +99,16 @@ export function buildNetWorthSeries(history: GameRecord[]): PlayerNetWorthSeries
 
   return names.map((name) => {
     let running = 0;
-    const points: NetWorthPoint[] = games.map((g, i) => {
+    const points: NetWorthPoint[] = [{ label: "Start", gameId: "", cumulative: 0 }];
+    for (const [i, g] of games.entries()) {
       const player = g.players.find((p) => p.name === name);
       if (player && player.active) {
         const boughtIn = player.stacksBought * CHIPS_PER_STACK;
         const returned = player.chipsReturned ?? 0;
         running += (returned - boughtIn) * VND_PER_CHIP;
       }
-      return { label: labels[i], gameId: g.id, cumulative: running };
-    });
+      points.push({ label: labels[i], gameId: g.id, cumulative: running });
+    }
     return { name, points };
   });
 }
