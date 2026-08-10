@@ -15,7 +15,10 @@ export async function submitGameResult(
   players: Player[]
 ): Promise<void> {
   const shifted = new Date(endTime);
-  if (shifted.getDate() >= 26) {
+  const the25th = new Date(shifted.getFullYear(), shifted.getMonth(), 25);
+  const rollsEarly =
+    the25th.getDay() === 6 && shifted.getDate() === 24 && shifted.getHours() >= 14;
+  if (shifted.getDate() >= 26 || rollsEarly) {
     shifted.setMonth(shifted.getMonth() + 1);
   }
   const sheetName = `${shifted.getMonth() + 1}/${shifted.getFullYear()}`;
