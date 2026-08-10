@@ -23,3 +23,25 @@ create policy "anon full access" on game_records
   to anon
   using (true)
   with check (true);
+
+-- Cache for the AI bankroll insights shown on the stats screen. One row per
+-- (accounting month, scope) pair -- `key` is "8/2026|*" for the whole table or
+-- "8/2026|hiếu" when a single player is soloed. `input_hash` fingerprints the
+-- facts the summary was generated from, so adding or editing a game makes the
+-- stored insight stop matching and the UI offers to regenerate instead of
+-- showing a summary that no longer fits the chart.
+create table if not exists ai_insights (
+  key text primary key,
+  input_hash text not null,
+  content jsonb not null,
+  model text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table ai_insights enable row level security;
+
+create policy "anon full access" on ai_insights
+  for all
+  to anon
+  using (true)
+  with check (true);

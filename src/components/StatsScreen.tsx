@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch } from "react";
 import {
   CartesianGrid,
   Line,
@@ -10,7 +10,16 @@ import {
 } from "recharts";
 import type { GameRecord, Action } from "../types";
 import { buildNetWorthSeries, groupGamesByAccountingMonth } from "../utils/history";
-import { formatVND } from "../utils/format";
+import { displayName, formatVND } from "../utils/format";
+import { buildMonthFacts } from "../utils/analytics";
+import {
+  fetchCachedInsight,
+  hashFacts,
+  insightKey,
+  requestInsight,
+  saveInsight,
+  type Insight,
+} from "../utils/insight";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
 interface Props {
@@ -79,6 +88,60 @@ export default function StatsScreen({ history, dispatch }: Props) {
     });
   }
 
+  // --- AI insight -------------------------------------------------------
+  // Scope follows the chart: soloing a player switches the analysis to them.
+  const focus = visible !== null && visible.size === 1 ? Array.from(visible)[0] : null;
+  const facts = useMemo(
+    () => buildMonthFacts(activeGroup?.key ?? "", monthGames),
+    [activeGroup, monthGames]
+  );
+  const cacheKey = insightKey(facts.monthKey, focus);
+  const factsHash = useMemo(() => hashFacts(facts), [facts]);
+
+  const [insight, setInsight] = useState<Insight | null>(null);
+  const [insightMeta, setInsightMeta] = useState<{ model: string; createdAt: string } | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+
+  // Changing month or focus swaps to a different insight entirely. A cached one
+  // only counts when it was generated from these exact facts -- otherwise the
+  // panel falls back to the generate button rather than showing a summary that
+  // no longer matches the chart.
+  useEffect(() => {
+    let cancelled = false;
+    setInsight(null);
+    setInsightMeta(null);
+    setInsightError(null);
+    fetchCachedInsight(cacheKey, factsHash).then((cached) => {
+      if (cancelled || !cached) return;
+      setInsight(cached.insight);
+      setInsightMeta({ model: cached.model, createdAt: cached.createdAt });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, factsHash]);
+
+  const generateInsight = useCallback(async () => {
+    setInsightLoading(true);
+    setInsightError(null);
+    try {
+      const response = await requestInsight({ facts, focus });
+      setInsight(response.insight);
+      // Mock output never reaches the cache -- it would otherwise sit there
+      // masking the real thing once a key is configured.
+      const createdAt =
+        response.model === "mock"
+          ? new Date().toISOString()
+          : await saveInsight(cacheKey, factsHash, response);
+      setInsightMeta({ model: response.model, createdAt });
+    } catch (error) {
+      setInsightError(error instanceof Error ? error.message : "Gọi AI thất bại");
+    } finally {
+      setInsightLoading(false);
+    }
+  }, [facts, focus, cacheKey, factsHash]);
+
   const pointCount = series[0]?.points.length ?? 0;
   const chartData = useMemo(() => {
     if (pointCount === 0) return [];
@@ -132,6 +195,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
       {pointCount === 0 ? (
         <p className="history-empty">No finished games this month.</p>
       ) : (
+        <>
         <div className="stats-body">
           <div className="stats-chart-scroll">
             {/* On a wide screen the chart fills the column; on mobile it keeps a
@@ -173,6 +237,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                         key={s.name}
                         type="monotone"
                         dataKey={s.name}
+                        name={displayName(s.name)}
                         stroke={LINE_COLORS[i % LINE_COLORS.length]}
                         strokeWidth={2}
                         dot={{ r: 3 }}
@@ -206,13 +271,13 @@ export default function StatsScreen({ history, dispatch }: Props) {
                     <button
                       className="stats-legend-main"
                       onClick={() => solo(s.name)}
-                      aria-label={soloed ? `Show all players` : `Show only ${s.name}`}
+                      aria-label={soloed ? `Show all players` : `Show only ${displayName(s.name)}`}
                     >
                       <span
                         className="stats-legend-dot"
                         style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
                       />
-                      <span className="stats-legend-name">{s.name}</span>
+                      <span className="stats-legend-name">{displayName(s.name)}</span>
                       <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>
                         {formatVND(last)}
                       </span>
@@ -220,7 +285,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                     <button
                       className="stats-legend-chip"
                       onClick={() => toggle(s.name)}
-                      aria-label={shown ? `Hide ${s.name}` : `Add ${s.name}`}
+                      aria-label={shown ? `Hide ${displayName(s.name)}` : `Add ${displayName(s.name)}`}
                     >
                       {shown ? "−" : "+"}
                     </button>
@@ -229,6 +294,70 @@ export default function StatsScreen({ history, dispatch }: Props) {
               })}
           </div>
         </div>
+
+        <div className="ai-block">
+          <div className="ai-actions">
+            <button
+              className="ai-generate"
+              onClick={generateInsight}
+              disabled={insightLoading}
+            >
+              {insightLoading
+                ? "Đang phân tích…"
+                : insight
+                  ? "↻ Tạo lại"
+                  : focus
+                    ? `✨ Mổ xẻ ${displayName(focus)}`
+                    : "✨ AI phân tích tháng này"}
+            </button>
+            {focus && (
+              <span className="ai-scope-hint">
+                phạm vi: {displayName(focus)}
+              </span>
+            )}
+          </div>
+
+          {insightError && <p className="ai-error">{insightError}</p>}
+
+          {insightLoading && !insight && (
+            <div className="ai-panel ai-panel-skeleton" aria-hidden="true">
+              <div className="ai-skeleton-line lg" />
+              <div className="ai-skeleton-line sm" />
+              <div className="ai-skeleton-line" />
+              <div className="ai-skeleton-line" />
+              <div className="ai-skeleton-line sm" />
+            </div>
+          )}
+
+          {insight && (
+            <div className="ai-panel">
+              <h3 className="ai-headline">{insight.headline}</h3>
+              {insight.sections.map((section, i) => (
+                <section className="ai-section" key={i}>
+                  <h4>{section.title}</h4>
+                  {section.quote && <blockquote>{section.quote}</blockquote>}
+                  {section.bullets.length > 0 && (
+                    <ul>
+                      {section.bullets.map((bullet, j) => (
+                        <li key={j}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              ))}
+              {insightMeta && (
+                <p className="ai-footer">
+                  {insightMeta.model === "mock"
+                    ? "bản mock — chưa cấu hình DEEPSEEK_API_KEY"
+                    : insightMeta.model}
+                  {" · "}
+                  {new Date(insightMeta.createdAt).toLocaleString("vi-VN")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        </>
       )}
     </div>
   );

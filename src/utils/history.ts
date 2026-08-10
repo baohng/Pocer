@@ -67,8 +67,9 @@ function formatDayLabel(iso: string): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
 }
 
-/** Disambiguates repeated same-day labels: "27/07", "27/07 #2", "27/07 #3". */
-function buildLabels(games: GameRecord[]): string[] {
+/** Disambiguates repeated same-day labels: "27/07", "27/07 #2", "27/07 #3".
+ *  Expects games already in chronological order. */
+export function buildGameLabels(games: GameRecord[]): string[] {
   const seen = new Map<string, number>();
   return games.map((g) => {
     const day = formatDayLabel(g.endTime);
@@ -92,7 +93,7 @@ export function buildNetWorthSeries(history: GameRecord[]): PlayerNetWorthSeries
   );
   if (games.length === 0) return [];
 
-  const labels = buildLabels(games);
+  const labels = buildGameLabels(games);
   const names = Array.from(
     new Set(games.flatMap((g) => g.players.filter((p) => p.active).map((p) => p.name)))
   );
