@@ -40,16 +40,19 @@ export async function fetchRemoteHistory(): Promise<GameRecord[]> {
     .from("game_records")
     .select("*")
     .order("end_time", { ascending: false });
+  if (error) console.error("[supabase] fetch history failed", error);
   if (error || !data) return [];
   return (data as GameRecordRow[]).map(rowToRecord);
 }
 
 export async function upsertRemoteGameRecord(record: GameRecord): Promise<void> {
   if (!supabase) return;
-  await supabase.from("game_records").upsert(recordToRow(record));
+  const { error } = await supabase.from("game_records").upsert(recordToRow(record));
+  if (error) console.error("[supabase] upsert failed", error);
 }
 
 export async function deleteRemoteGameRecord(id: string): Promise<void> {
   if (!supabase) return;
-  await supabase.from("game_records").delete().eq("id", id);
+  const { error } = await supabase.from("game_records").delete().eq("id", id);
+  if (error) console.error("[supabase] delete failed", error);
 }
