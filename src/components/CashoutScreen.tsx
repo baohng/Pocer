@@ -56,7 +56,11 @@ export default function CashoutScreen({
     try {
       await submitGameResult(new Date(endTimeValue), players);
       setShowEndTimeModal(false);
-      dispatch({ type: "CALCULATE" });
+      dispatch({
+        type: "CALCULATE",
+        endTime: new Date(endTimeValue).toISOString(),
+        submitted: true,
+      });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -66,7 +70,10 @@ export default function CashoutScreen({
 
   function handleSkip() {
     setShowEndTimeModal(false);
-    dispatch({ type: "CALCULATE" });
+    dispatch({
+      type: "CALCULATE",
+      endTime: endTimeValue ? new Date(endTimeValue).toISOString() : undefined,
+    });
   }
 
   return (

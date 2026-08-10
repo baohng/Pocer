@@ -57,10 +57,10 @@ export type Action =
   | { type: "SET_STACKS_BOUGHT"; playerId: string; stacks: number }
   | { type: "END_GAME" }
   | { type: "SET_CHIPS_RETURNED"; playerId: string; chips: number | null }
-  | { type: "CALCULATE" }
+  | { type: "CALCULATE"; endTime?: string; submitted?: boolean }
   | { type: "RESET" }
   // History & editing
-  | { type: "FINISH_GAME"; endTime?: string }
+  | { type: "FINISH_GAME" }
   | { type: "OPEN_HISTORY" }
   | { type: "CLOSE_HISTORY" }
   | { type: "EDIT_GAME"; id: string }

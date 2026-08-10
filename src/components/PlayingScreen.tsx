@@ -26,6 +26,7 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
   const canRedo = undoneEntry !== null;
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState("");
+  const [addPlayerError, setAddPlayerError] = useState(false);
   const [cashoutPlayerId, setCashoutPlayerId] = useState<string | null>(null);
   const [cashoutChips, setCashoutChips] = useState("");
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -96,13 +97,22 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
   function handleAddPlayer() {
     const name = newPlayerName.trim();
     if (!name) return;
+    const isDuplicate = activePlayers.some(
+      (p) => p.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (isDuplicate) {
+      setAddPlayerError(true);
+      return;
+    }
     dispatch({ type: "ADD_PLAYER", name });
     setNewPlayerName("");
+    setAddPlayerError(false);
     setAddPlayerOpen(false);
   }
 
   function handleCancelAdd() {
     setNewPlayerName("");
+    setAddPlayerError(false);
     setAddPlayerOpen(false);
   }
 
@@ -280,10 +290,16 @@ export default function PlayingScreen({ players, buyLog, undoneEntry, dispatch }
             type="text"
             className="player-name-input"
             value={newPlayerName}
-            onChange={(e) => setNewPlayerName(e.target.value)}
+            onChange={(e) => {
+              setNewPlayerName(e.target.value);
+              setAddPlayerError(false);
+            }}
             onKeyDown={handleAddKeyDown}
             placeholder="Player name"
           />
+          {addPlayerError && (
+            <p className="add-player-error">A player with this name is already in the game</p>
+          )}
           <div className="add-player-actions">
             <button className="btn btn-secondary" onClick={handleCancelAdd}>
               Cancel

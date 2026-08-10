@@ -22,6 +22,14 @@ const DEFAULT_NAMES = [
   "Đạt", "Hải", "Bình", "Đông", "bé Đào", "Phúc", "Hiếu", "Bảo", "Tuấn Anh",
 ];
 
+/** Stats/Sheets match players by name across sessions (ids are re-created
+ *  each game), so two active players sharing a name silently collapse into
+ *  one -- reject the add instead of letting that happen. */
+function nameTaken(players: Player[], name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return players.some((p) => p.active && p.name.trim().toLowerCase() === normalized);
+}
+
 function createPlayer(name: string): Player {
   return {
     id: crypto.randomUUID(),
@@ -97,6 +105,7 @@ function gameReducer(state: Session, action: Action): Session {
 
     case "ADD_PLAYER": {
       const name = action.name ?? `Player ${state.players.length + 1}`;
+      if (nameTaken(state.players, name)) return state;
       const player = createPlayer(name);
       if (state.phase === "playing") {
         player.stacksBought = 1;
@@ -261,9 +270,6 @@ function gameReducer(state: Session, action: Action): Session {
         ),
       };
 
-    case "CALCULATE":
-      return { ...state, phase: "summary" };
-
     case "RESET":
       return createInitialSession();
 
@@ -276,22 +282,29 @@ function gameReducer(state: Session, action: Action): Session {
  *  history/editing actions operate on the history list. */
 function appReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case "FINISH_GAME": {
+    // Persist the finished game into history (and, via the sync effect in
+    // App, up to Supabase) as soon as cashout is calculated -- not deferred
+    // until "New Game" is clicked, which the user can skip entirely after
+    // just checking the results.
+    case "CALCULATE": {
       const now = new Date().toISOString();
       const record: GameRecord = {
         id: crypto.randomUUID(),
         endTime: action.endTime ?? now,
         createdAt: now,
         updatedAt: now,
-        submittedAt: null,
+        submittedAt: action.submitted ? now : null,
         players: state.current.players,
       };
       return {
         ...state,
-        current: createInitialSession(),
+        current: { ...state.current, phase: "summary" },
         history: [record, ...state.history],
       };
     }
+
+    case "FINISH_GAME":
+      return { ...state, current: createInitialSession() };
 
     case "OPEN_HISTORY":
       return { ...state, viewingHistory: true };

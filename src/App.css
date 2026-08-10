@@ -610,6 +610,12 @@
   border-color: var(--primary);
 }
 
+.add-player-error {
+  font-size: 13px;
+  color: var(--yellow);
+  margin: -4px 0 0;
+}
+
 .add-player-actions {
   display: flex;
   gap: 8px;
