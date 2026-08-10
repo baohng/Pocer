@@ -18,8 +18,19 @@ function insightDevApi(env: Record<string, string>): Plugin {
         }
         res.setHeader('Content-Type', 'application/json')
         try {
+          // Mirrors the cap in api/insight.ts. No rate limit here: dev only
+          // ever serves localhost, and the throttle exists for the public URL.
           const chunks: Buffer[] = []
-          for await (const chunk of req) chunks.push(chunk as Buffer)
+          let size = 0
+          for await (const chunk of req) {
+            size += (chunk as Buffer).length
+            if (size > 64 * 1024) {
+              res.statusCode = 413
+              res.end(JSON.stringify({ error: 'Payload quá lớn' }))
+              return
+            }
+            chunks.push(chunk as Buffer)
+          }
           const core = await server.ssrLoadModule('/api/_insight-core.ts')
           const result = await core.generateInsight(
             JSON.parse(Buffer.concat(chunks).toString('utf8')),
@@ -28,8 +39,9 @@ function insightDevApi(env: Record<string, string>): Plugin {
           res.end(JSON.stringify(result))
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Lỗi không xác định'
-          server.config.logger.error(`[insight] ${message}`)
-          res.statusCode = 502
+          const badRequest = error instanceof Error && error.name === 'BadRequestError'
+          if (!badRequest) server.config.logger.error(`[insight] ${message}`)
+          res.statusCode = badRequest ? 400 : 502
           res.end(JSON.stringify({ error: message }))
         }
       })

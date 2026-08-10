@@ -5,7 +5,7 @@
 //
 // Type-only imports of client code: erased at build time, so this file carries
 // no runtime dependency on the React app or on Supabase.
-import type { MonthFacts, PlayerFacts } from "../src/utils/analytics";
+import type { MonthFacts, PlayerFacts, SessionResult } from "../src/utils/analytics";
 import type { Insight, InsightRequest, InsightResponse } from "../src/utils/insight";
 
 type Env = Record<string, string | undefined>;
@@ -71,9 +71,82 @@ function buildSystemPrompt(focused: boolean): string {
   ].join("\n\n");
 }
 
-/** Trims the facts down to what the model should reason over: internal keys
- *  dropped, the curve rescaled to thousands so it reads as a shape rather than
- *  a list of quotable numbers. */
+// Caps on anything that reaches the prompt. The endpoint is public and the
+// whole facts object is client-supplied, so without these a caller could pad
+// the payload into an expensive prompt and spend the account's credit. Sized
+// well above what a real month produces: 20 players, 80 games.
+const MAX_PLAYERS = 20;
+const MAX_CURVE = 80;
+const MAX_TOP_SESSIONS = 5;
+const MAX_NAME = 40;
+const MAX_MONEY = 32;
+const MAX_LABEL = 24;
+
+/** Coerces to a single-line string of bounded length. Newlines and control
+ *  characters go first: they are what lets injected text pose as a new
+ *  instruction block once the facts are stringified into the prompt. */
+function text(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  return value
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+function num(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function asArray<T>(value: T[] | undefined, max: number): T[] {
+  return Array.isArray(value) ? value.slice(0, max) : [];
+}
+
+/** The single gate every request passes through: rebuilds the facts field by
+ *  field, so unknown properties are dropped and every string and array is
+ *  clamped. Everything downstream -- prompt and mock alike -- reads the result
+ *  of this rather than the raw request. */
+function sanitizeFacts(facts: MonthFacts): MonthFacts {
+  const session = (s: SessionResult | undefined) => ({
+    label: text(s?.label, MAX_LABEL),
+    net: num(s?.net),
+    text: text(s?.text, MAX_MONEY),
+  });
+
+  return {
+    monthKey: text(facts.monthKey, MAX_LABEL),
+    gameCount: num(facts.gameCount),
+    totalMoved: num(facts.totalMoved),
+    totalMovedText: text(facts.totalMovedText, MAX_MONEY),
+    players: asArray(facts.players, MAX_PLAYERS).map((p) => ({
+      key: text(p?.key, MAX_NAME),
+      name: text(p?.name, MAX_NAME),
+      net: num(p?.net),
+      netText: text(p?.netText, MAX_MONEY),
+      sessions: num(p?.sessions),
+      wins: num(p?.wins),
+      losses: num(p?.losses),
+      best: p?.best ? session(p.best) : null,
+      worst: p?.worst ? session(p.worst) : null,
+      topSessions: asArray(p?.topSessions, MAX_TOP_SESSIONS).map(session),
+      longestWinStreak: num(p?.longestWinStreak),
+      longestLoseStreak: num(p?.longestLoseStreak),
+      currentStreak: num(p?.currentStreak),
+      maxDrawdown: num(p?.maxDrawdown),
+      maxDrawdownText: text(p?.maxDrawdownText, MAX_MONEY),
+      stdev: num(p?.stdev),
+      stdevText: text(p?.stdevText, MAX_MONEY),
+      avgStacks: num(p?.avgStacks),
+      concentration: typeof p?.concentration === "number" ? num(p.concentration) : null,
+      curve: asArray(p?.curve, MAX_CURVE).map(num),
+    })),
+  };
+}
+
+/** Reshapes already-sanitised facts into what the model should reason over:
+ *  internal keys dropped, money reduced to its pre-formatted string, and the
+ *  curve rescaled to thousands so it reads as a shape rather than a list of
+ *  quotable numbers. */
 function toPromptFacts(facts: MonthFacts, focus: string | null) {
   const player = (p: PlayerFacts) => ({
     name: p.name,
@@ -98,21 +171,21 @@ function toPromptFacts(facts: MonthFacts, focus: string | null) {
     month: facts.monthKey,
     gameCount: facts.gameCount,
     totalMoved: facts.totalMovedText,
-    focus: focus ? facts.players.find((p) => p.key === focus)?.name ?? null : null,
+    focus: (focus && facts.players.find((p) => p.key === focus)?.name) || null,
     players: facts.players.map(player),
   };
 }
 
 function buildUserPrompt(facts: MonthFacts, focus: string | null): string {
-  const target = focus ? facts.players.find((p) => p.key === focus) : null;
-  const task = target
-    ? `Mổ xẻ riêng đường bankroll của ${target.name} trong tháng ${facts.monthKey}, đặt trong tương quan với cả bàn. Trọng tâm là ${target.name}, những người khác chỉ dùng để so sánh.`
-    : `Phân tích cả bàn ${facts.players.length} người trong tháng ${facts.monthKey}: ai đang ăn tiền của ai, đường tiền của từng người có hình dạng gì, ai kiểm soát variance tốt, ai đang trong downswing. Nhớ là cả ${facts.players.length} người đều phải được gọi tên.`;
+  const safe = toPromptFacts(facts, focus);
+  const task = safe.focus
+    ? `Mổ xẻ riêng đường bankroll của ${safe.focus} trong tháng ${safe.month}, đặt trong tương quan với cả bàn. Trọng tâm là ${safe.focus}, những người khác chỉ dùng để so sánh.`
+    : `Phân tích cả bàn ${safe.players.length} người trong tháng ${safe.month}: ai đang ăn tiền của ai, đường tiền của từng người có hình dạng gì, ai kiểm soát variance tốt, ai đang trong downswing. Nhớ là cả ${safe.players.length} người đều phải được gọi tên.`;
 
   return `${task}
 
 FACTS:
-${JSON.stringify(toPromptFacts(facts, focus), null, 1)}`;
+${JSON.stringify(safe, null, 1)}`;
 }
 
 /** Accepts the model's raw text and returns an Insight, or throws. Tolerates a
@@ -199,20 +272,39 @@ function mockInsight(facts: MonthFacts, focus: string | null): Insight {
   };
 }
 
+/** The caller sent something malformed, as opposed to an upstream failure.
+ *  `name` is set explicitly so the Vite dev middleware can recognise it across
+ *  a module boundary without an instanceof check. */
+export class BadRequestError extends Error {
+  name = "BadRequestError";
+}
+
 function assertValidRequest(body: unknown): asserts body is InsightRequest {
   const req = body as Partial<InsightRequest>;
-  if (!req || typeof req !== "object") throw new Error("Body không hợp lệ");
-  if (!req.facts || !Array.isArray(req.facts.players)) throw new Error("Thiếu facts");
-  if (req.facts.players.length === 0) throw new Error("Tháng này chưa có dữ liệu để phân tích");
+  if (!req || typeof req !== "object") throw new BadRequestError("Body không hợp lệ");
+  if (!req.facts || !Array.isArray(req.facts.players)) {
+    throw new BadRequestError("Thiếu facts");
+  }
+  if (req.facts.players.length === 0) {
+    throw new BadRequestError("Tháng này chưa có dữ liệu để phân tích");
+  }
+  if (req.facts.players.length > MAX_PLAYERS) {
+    throw new BadRequestError(`Tối đa ${MAX_PLAYERS} người chơi mỗi lần phân tích`);
+  }
+  if (req.focus != null && typeof req.focus !== "string") {
+    throw new BadRequestError("focus phải là chuỗi hoặc null");
+  }
 }
 
 export async function generateInsight(body: unknown, env: Env): Promise<InsightResponse> {
   assertValidRequest(body);
-  const { facts, focus } = body;
+  // Nothing below this line ever touches the raw request again.
+  const facts = sanitizeFacts(body.facts);
+  const focus = body.focus ? text(body.focus, MAX_NAME) : null;
 
   const apiKey = env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return { insight: mockInsight(facts, focus ?? null), model: "mock" };
+    return { insight: mockInsight(facts, focus), model: "mock" };
   }
 
   const model = env.DEEPSEEK_MODEL || DEFAULT_MODEL;
@@ -228,7 +320,7 @@ export async function generateInsight(body: unknown, env: Env): Promise<InsightR
       model,
       messages: [
         { role: "system", content: buildSystemPrompt(!!focus) },
-        { role: "user", content: buildUserPrompt(facts, focus ?? null) },
+        { role: "user", content: buildUserPrompt(facts, focus) },
       ],
       response_format: { type: "json_object" },
       // Warmer than default: the group asked to be roasted, and a dry model
