@@ -55,7 +55,15 @@ export default function HistoryScreen({ history, dispatch }: Props) {
           ← Back
         </button>
         <h2>History</h2>
-        <span className="player-count">{history.length} games</span>
+        <div className="section-header-actions">
+          <button
+            className="btn-back"
+            onClick={() => dispatch({ type: "OPEN_STATS" })}
+          >
+            Stats
+          </button>
+          <span className="player-count">{history.length} games</span>
+        </div>
       </div>
 
       {history.length === 0 ? (

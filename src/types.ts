@@ -38,6 +38,7 @@ export interface AppState {
   history: GameRecord[]; // newest first
   editingId: string | null; // non-null while editing a past record
   viewingHistory: boolean; // true while the history list is open
+  viewingStats: boolean; // true while the net-worth-over-time chart is open
 }
 
 export type Action =
@@ -67,4 +68,8 @@ export type Action =
   | { type: "DELETE_GAME"; id: string }
   | { type: "MARK_SUBMITTED"; id: string }
   // Sharing / handoff
-  | { type: "LOAD_SHARED_SESSION"; session: Session };
+  | { type: "LOAD_SHARED_SESSION"; session: Session }
+  // Supabase sync: merge remote rows into local history, newer updatedAt wins.
+  | { type: "MERGE_REMOTE_HISTORY"; remote: GameRecord[] }
+  | { type: "OPEN_STATS" }
+  | { type: "CLOSE_STATS" };

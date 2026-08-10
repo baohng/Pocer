@@ -14,12 +14,20 @@ export default function SetupScreen({ players, dispatch }: Props) {
     <div className="screen setup-screen">
       <div className="section-header">
         <h2>Players</h2>
-        <button
-          className="btn-back"
-          onClick={() => dispatch({ type: "OPEN_HISTORY" })}
-        >
-          History
-        </button>
+        <div className="section-header-actions">
+          <button
+            className="btn-back"
+            onClick={() => dispatch({ type: "OPEN_STATS" })}
+          >
+            Stats
+          </button>
+          <button
+            className="btn-back"
+            onClick={() => dispatch({ type: "OPEN_HISTORY" })}
+          >
+            History
+          </button>
+        </div>
       </div>
       <div className="player-count-row">
         <span className="player-count">{activePlayers.length} players</span>

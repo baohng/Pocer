@@ -1,12 +1,18 @@
-import { useReducer, useEffect, useState } from "react";
+import { useReducer, useEffect, useRef, useState } from "react";
 import type { Session, Action, Player, AppState, GameRecord, BuyEntry } from "./types";
 import { saveAppState, loadAppState } from "./utils/storage";
 import { readJoinTokenFromUrl, decodeSession, clearJoinTokenFromUrl } from "./utils/share";
+import {
+  fetchRemoteHistory,
+  upsertRemoteGameRecord,
+  deleteRemoteGameRecord,
+} from "./utils/supabaseSync";
 import SetupScreen from "./components/SetupScreen";
 import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
 import HistoryScreen from "./components/HistoryScreen";
+import StatsScreen from "./components/StatsScreen";
 import JoinScreen from "./components/JoinScreen";
 import ShareSheet from "./components/ShareSheet";
 import { ToastProvider } from "./components/Toast";
@@ -55,7 +61,27 @@ function createInitialAppState(): AppState {
     history: [],
     editingId: null,
     viewingHistory: false,
+    viewingStats: false,
   };
+}
+
+/** Merge remote rows into local history by id; newer updatedAt wins.
+ *  Result is sorted newest-first by endTime, matching history's invariant. */
+function mergeHistories(local: GameRecord[], remote: GameRecord[]): GameRecord[] {
+  const byId = new Map<string, GameRecord>();
+  for (const g of local) byId.set(g.id, g);
+  for (const g of remote) {
+    const existing = byId.get(g.id);
+    if (
+      !existing ||
+      new Date(g.updatedAt).getTime() > new Date(existing.updatedAt).getTime()
+    ) {
+      byId.set(g.id, g);
+    }
+  }
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+  );
 }
 
 /** Reducer for the in-progress game (and the editing snapshot). */
@@ -273,6 +299,15 @@ function appReducer(state: AppState, action: Action): AppState {
     case "CLOSE_HISTORY":
       return { ...state, viewingHistory: false, editingId: null };
 
+    case "OPEN_STATS":
+      return { ...state, viewingStats: true };
+
+    case "CLOSE_STATS":
+      return { ...state, viewingStats: false };
+
+    case "MERGE_REMOTE_HISTORY":
+      return { ...state, history: mergeHistories(state.history, action.remote) };
+
     case "EDIT_GAME": {
       const record = state.history.find((g) => g.id === action.id);
       if (!record) return state;
@@ -323,6 +358,7 @@ function appReducer(state: AppState, action: Action): AppState {
         current: action.session,
         editingId: null,
         viewingHistory: false,
+        viewingStats: false,
       };
 
     default:
@@ -349,6 +385,38 @@ function App() {
   useEffect(() => {
     saveAppState(state);
   }, [state]);
+
+  // On mount, pull remote history from Supabase and merge it in (no-op if
+  // Supabase isn't configured). Runs once; subsequent local changes are
+  // pushed up by the diff effect below.
+  useEffect(() => {
+    fetchRemoteHistory().then((remote) => {
+      if (remote.length > 0) {
+        dispatch({ type: "MERGE_REMOTE_HISTORY", remote });
+      }
+    });
+  }, []);
+
+  // Mirror local history edits to Supabase: push changed/new records,
+  // delete ones removed locally. No-op if Supabase isn't configured.
+  const prevHistoryRef = useRef<GameRecord[]>(state.history);
+  useEffect(() => {
+    const prev = prevHistoryRef.current;
+    const prevById = new Map(prev.map((g) => [g.id, g]));
+    const nextById = new Map(state.history.map((g) => [g.id, g]));
+    for (const g of state.history) {
+      const before = prevById.get(g.id);
+      if (!before || before.updatedAt !== g.updatedAt) {
+        upsertRemoteGameRecord(g);
+      }
+    }
+    for (const id of prevById.keys()) {
+      if (!nextById.has(id)) {
+        deleteRemoteGameRecord(id);
+      }
+    }
+    prevHistoryRef.current = state.history;
+  }, [state.history]);
 
   // On mount, check for a shared-session token in the URL fragment.
   useEffect(() => {
@@ -390,9 +458,10 @@ function App() {
 
   const [showShare, setShowShare] = useState(false);
 
-  const { current: session, history, editingId, viewingHistory } = state;
+  const { current: session, history, editingId, viewingHistory, viewingStats } = state;
   const canShare =
-    !editingId && !viewingHistory && (session.phase === "playing" || session.phase === "cashout");
+    !editingId && !viewingHistory && !viewingStats &&
+    (session.phase === "playing" || session.phase === "cashout");
   const editingRecord = editingId
     ? history.find((g) => g.id === editingId) ?? null
     : null;
@@ -400,9 +469,11 @@ function App() {
   // Render key so the entry-animation re-runs when the view changes.
   const viewKey = editingId
     ? `edit-${editingId}`
-    : viewingHistory
-      ? "history"
-      : session.phase;
+    : viewingStats
+      ? "stats"
+      : viewingHistory
+        ? "history"
+        : session.phase;
 
   return (
     <ToastProvider>
@@ -429,6 +500,8 @@ function App() {
                 editing
                 submittedAt={editingRecord?.submittedAt ?? null}
               />
+            ) : viewingStats ? (
+              <StatsScreen history={history} dispatch={dispatch} />
             ) : viewingHistory ? (
               <HistoryScreen history={history} dispatch={dispatch} />
             ) : (

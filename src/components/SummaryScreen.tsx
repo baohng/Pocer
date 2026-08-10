@@ -128,6 +128,12 @@ export default function SummaryScreen({ players, dispatch }: Props) {
         </button>
         <button
           className="btn btn-secondary"
+          onClick={() => dispatch({ type: "OPEN_STATS" })}
+        >
+          Stats
+        </button>
+        <button
+          className="btn btn-secondary"
           onClick={() => dispatch({ type: "OPEN_HISTORY" })}
         >
           History

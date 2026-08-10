@@ -34,6 +34,7 @@ export function loadAppState(): AppState | null {
       }));
       state.editingId = state.editingId ?? null;
       state.viewingHistory = state.viewingHistory ?? false;
+      state.viewingStats = state.viewingStats ?? false;
       return state;
     }
 
@@ -53,6 +54,7 @@ export function loadAppState(): AppState | null {
         history: [],
         editingId: null,
         viewingHistory: false,
+        viewingStats: false,
       };
     }
 
