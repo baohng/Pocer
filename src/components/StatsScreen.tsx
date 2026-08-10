@@ -40,20 +40,41 @@ export default function StatsScreen({ history, dispatch }: Props) {
   const monthGames = useMemo(() => activeGroup?.games ?? [], [activeGroup]);
 
   const series = useMemo(() => buildNetWorthSeries(monthGames), [monthGames]);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  // null means "every line is shown". A non-null set is an explicit selection;
+  // it never goes empty — emptying it falls back to null so the chart is never
+  // blank. Months don't share a roster, so changing month resets the selection.
+  const [visible, setVisible] = useState<Set<string> | null>(null);
+  const isVisible = (name: string) => visible === null || visible.has(name);
+  const isSoloed = (name: string) => visible !== null && visible.size === 1 && visible.has(name);
 
   function goPrevMonth() {
-    if (activeIndex > 0) setSelectedKey(monthGroups[activeIndex - 1].key);
+    if (activeIndex > 0) {
+      setSelectedKey(monthGroups[activeIndex - 1].key);
+      setVisible(null);
+    }
   }
   function goNextMonth() {
-    if (activeIndex < monthGroups.length - 1) setSelectedKey(monthGroups[activeIndex + 1].key);
+    if (activeIndex < monthGroups.length - 1) {
+      setSelectedKey(monthGroups[activeIndex + 1].key);
+      setVisible(null);
+    }
   }
 
+  /** Row tap: isolate this line, or restore every line if it is already alone. */
+  function solo(name: string) {
+    setVisible((prev) =>
+      prev !== null && prev.size === 1 && prev.has(name) ? null : new Set([name])
+    );
+  }
+
+  /** Chip tap: add this line to the current selection, or drop it from it. */
   function toggle(name: string) {
-    setHidden((prev) => {
-      const next = new Set(prev);
+    setVisible((prev) => {
+      const next = new Set(prev ?? series.map((s) => s.name));
       if (next.has(name)) next.delete(name);
       else next.add(name);
+      if (next.size === 0 || next.size === series.length) return null;
       return next;
     });
   }
@@ -147,7 +168,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                     itemSorter={(item) => -Number(item.value)}
                   />
                   {series.map((s, i) =>
-                    hidden.has(s.name) ? null : (
+                    !isVisible(s.name) ? null : (
                       <Line
                         key={s.name}
                         type="monotone"
@@ -166,26 +187,44 @@ export default function StatsScreen({ history, dispatch }: Props) {
           </div>
 
           <div className="stats-legend">
+            {visible !== null && (
+              <button className="stats-legend-reset" onClick={() => setVisible(null)}>
+                Show all {series.length}
+              </button>
+            )}
             {series
               .map((s, i) => ({ s, i, last: s.points[s.points.length - 1]?.cumulative ?? 0 }))
               .sort((a, b) => b.last - a.last)
               .map(({ s, i, last }) => {
-                const isHidden = hidden.has(s.name);
+                const shown = isVisible(s.name);
+                const soloed = isSoloed(s.name);
                 return (
-                  <button
+                  <div
                     key={s.name}
-                    className={`stats-legend-item${isHidden ? " dimmed" : ""}`}
-                    onClick={() => toggle(s.name)}
+                    className={`stats-legend-item${shown ? "" : " dimmed"}${soloed ? " soloed" : ""}`}
                   >
-                    <span
-                      className="stats-legend-dot"
-                      style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
-                    />
-                    <span className="stats-legend-name">{s.name}</span>
-                    <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>
-                      {formatVND(last)}
-                    </span>
-                  </button>
+                    <button
+                      className="stats-legend-main"
+                      onClick={() => solo(s.name)}
+                      aria-label={soloed ? `Show all players` : `Show only ${s.name}`}
+                    >
+                      <span
+                        className="stats-legend-dot"
+                        style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
+                      />
+                      <span className="stats-legend-name">{s.name}</span>
+                      <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>
+                        {formatVND(last)}
+                      </span>
+                    </button>
+                    <button
+                      className="stats-legend-chip"
+                      onClick={() => toggle(s.name)}
+                      aria-label={shown ? `Hide ${s.name}` : `Add ${s.name}`}
+                    >
+                      {shown ? "−" : "+"}
+                    </button>
+                  </div>
                 );
               })}
           </div>

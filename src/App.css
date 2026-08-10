@@ -1387,24 +1387,72 @@
   margin-top: 20px;
 }
 
+.stats-legend-reset {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.stats-legend-reset:hover {
+  color: var(--text-heading);
+}
+
 .stats-legend-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
   width: 100%;
-  padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-card);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  overflow: hidden;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
 }
 
 .stats-legend-item.dimmed {
   opacity: 0.4;
+}
+
+.stats-legend-item.soloed {
+  border-color: var(--primary);
+}
+
+.stats-legend-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.stats-legend-chip {
+  flex-shrink: 0;
+  width: 34px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stats-legend-chip:hover {
+  background: var(--border);
+  color: var(--text-heading);
 }
 
 .stats-legend-dot {
@@ -1416,8 +1464,12 @@
 
 .stats-legend-name {
   flex: 1;
+  min-width: 0;
   text-align: left;
   color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stats-legend-value {
@@ -1437,7 +1489,7 @@
    `body.wide-view` is toggled by App.tsx while the stats screen is open. */
 @media (min-width: 900px) {
   body.wide-view #root {
-    max-width: 1080px;
+    max-width: min(96vw, 1320px);
   }
 
   body.wide-view .app-main {
@@ -1465,9 +1517,13 @@
     overflow-y: auto;
   }
 
-  .stats-legend-item {
+  .stats-legend-main {
     padding: 10px 12px;
     font-size: 14px;
+  }
+
+  .stats-legend-chip {
+    width: 38px;
   }
 
   .stats-month-nav {
