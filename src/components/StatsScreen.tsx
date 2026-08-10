@@ -135,6 +135,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                     }}
                     labelStyle={{ color: "var(--text-heading)" }}
                     formatter={(value, name) => [formatVND(Number(value)), name]}
+                    itemSorter={(item) => -Number(item.value)}
                   />
                   {series.map((s, i) =>
                     hidden.has(s.name) ? null : (
