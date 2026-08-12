@@ -14,6 +14,30 @@ export interface PlayerNetWorthSeries {
 
 const VNT_OFFSET_MS = 7 * 60 * 60 * 1000; // Vietnam time is UTC+7, no DST
 
+export type SubmitStatus = "never" | "edited" | "submitted";
+
+/** Whether a record's Sheet row is up to date: "edited" means it was
+ *  submitted once, then changed afterwards, so the sheet is stale. */
+export function getSubmitStatus(g: GameRecord): SubmitStatus {
+  if (!g.submittedAt) return "never";
+  if (new Date(g.updatedAt).getTime() > new Date(g.submittedAt).getTime())
+    return "edited";
+  return "submitted";
+}
+
+export const SUBMIT_STATUS_LABEL: Record<SubmitStatus, string> = {
+  submitted: "Submitted",
+  edited: "Edited since",
+  never: "Not submitted",
+};
+
+/** "12/08/2026 21:30" -- the human stamp used across history views. */
+export function formatStamp(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** The friend group's accounting month rolls over at 2pm VNT on the 25th
  *  (mirrors the sheet-naming rule in utils/api.ts, but computed precisely
  *  from the UTC instant rather than the device's local clock). Returns a

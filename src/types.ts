@@ -37,6 +37,7 @@ export interface AppState {
   current: Session;
   history: GameRecord[]; // newest first
   editingId: string | null; // non-null while editing a past record
+  viewingId: string | null; // non-null while a past record is open read-only
   viewingHistory: boolean; // true while the history list is open
   viewingStats: boolean; // true while the net-worth-over-time chart is open
 }
@@ -63,6 +64,8 @@ export type Action =
   | { type: "FINISH_GAME" }
   | { type: "OPEN_HISTORY" }
   | { type: "CLOSE_HISTORY" }
+  | { type: "VIEW_GAME"; id: string }
+  | { type: "CLOSE_GAME_VIEW" }
   | { type: "EDIT_GAME"; id: string }
   | { type: "SAVE_EDIT" }
   | { type: "DELETE_GAME"; id: string }

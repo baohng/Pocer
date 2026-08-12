@@ -12,6 +12,7 @@ import PlayingScreen from "./components/PlayingScreen";
 import CashoutScreen from "./components/CashoutScreen";
 import SummaryScreen from "./components/SummaryScreen";
 import HistoryScreen from "./components/HistoryScreen";
+import GameDetailScreen from "./components/GameDetailScreen";
 import StatsScreen from "./components/StatsScreen";
 import JoinScreen from "./components/JoinScreen";
 import ShareSheet from "./components/ShareSheet";
@@ -68,21 +69,36 @@ function createInitialAppState(): AppState {
     current: createInitialSession(),
     history: [],
     editingId: null,
+    viewingId: null,
     viewingHistory: false,
     viewingStats: false,
   };
 }
 
-/** Merge remote rows into local history by id; newer updatedAt wins.
+/** Merge remote rows into local history by id; newer updatedAt wins. A
+ *  re-submit bumps only submittedAt, so on an updatedAt tie the record with
+ *  the later submittedAt wins -- otherwise a remote row could clobber a
+ *  just-recorded submission.
  *  Result is sorted newest-first by endTime, matching history's invariant. */
+function stamp(iso: string | null): number {
+  return iso ? new Date(iso).getTime() : 0;
+}
+
 function mergeHistories(local: GameRecord[], remote: GameRecord[]): GameRecord[] {
   const byId = new Map<string, GameRecord>();
   for (const g of local) byId.set(g.id, g);
   for (const g of remote) {
     const existing = byId.get(g.id);
+    if (!existing) {
+      byId.set(g.id, g);
+      continue;
+    }
+    const remoteUpdated = stamp(g.updatedAt);
+    const localUpdated = stamp(existing.updatedAt);
     if (
-      !existing ||
-      new Date(g.updatedAt).getTime() > new Date(existing.updatedAt).getTime()
+      remoteUpdated > localUpdated ||
+      (remoteUpdated === localUpdated &&
+        stamp(g.submittedAt) > stamp(existing.submittedAt))
     ) {
       byId.set(g.id, g);
     }
@@ -310,7 +326,15 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, viewingHistory: true };
 
     case "CLOSE_HISTORY":
-      return { ...state, viewingHistory: false, editingId: null };
+      return { ...state, viewingHistory: false, editingId: null, viewingId: null };
+
+    case "VIEW_GAME": {
+      if (!state.history.some((g) => g.id === action.id)) return state;
+      return { ...state, viewingHistory: true, viewingId: action.id };
+    }
+
+    case "CLOSE_GAME_VIEW":
+      return { ...state, viewingId: null };
 
     case "OPEN_STATS":
       return { ...state, viewingStats: true };
@@ -327,6 +351,7 @@ function appReducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         editingId: action.id,
+        viewingId: null,
         current: { phase: "cashout", players: record.players, buyLog: [], undoneEntry: null },
       };
     }
@@ -349,6 +374,7 @@ function appReducer(state: AppState, action: Action): AppState {
     case "DELETE_GAME":
       return {
         ...state,
+        viewingId: state.viewingId === action.id ? null : state.viewingId,
         history: state.history.filter((g) => g.id !== action.id),
       };
 
@@ -370,6 +396,7 @@ function appReducer(state: AppState, action: Action): AppState {
         ...state,
         current: action.session,
         editingId: null,
+        viewingId: null,
         viewingHistory: false,
         viewingStats: false,
       };
@@ -412,6 +439,8 @@ function App() {
 
   // Mirror local history edits to Supabase: push changed/new records,
   // delete ones removed locally. No-op if Supabase isn't configured.
+  // A re-submit bumps submittedAt but not updatedAt, so both stamps are
+  // compared -- keying off updatedAt alone left the remote submitted_at stale.
   const prevHistoryRef = useRef<GameRecord[]>(state.history);
   useEffect(() => {
     const prev = prevHistoryRef.current;
@@ -419,7 +448,11 @@ function App() {
     const nextById = new Map(state.history.map((g) => [g.id, g]));
     for (const g of state.history) {
       const before = prevById.get(g.id);
-      if (!before || before.updatedAt !== g.updatedAt) {
+      if (
+        !before ||
+        before.updatedAt !== g.updatedAt ||
+        before.submittedAt !== g.submittedAt
+      ) {
         upsertRemoteGameRecord(g);
       }
     }
@@ -471,12 +504,15 @@ function App() {
 
   const [showShare, setShowShare] = useState(false);
 
-  const { current: session, history, editingId, viewingHistory, viewingStats } = state;
+  const { current: session, history, editingId, viewingId, viewingHistory, viewingStats } = state;
   const canShare =
     !editingId && !viewingHistory && !viewingStats &&
     (session.phase === "playing" || session.phase === "cashout");
   const editingRecord = editingId
     ? history.find((g) => g.id === editingId) ?? null
+    : null;
+  const viewingRecord = viewingId
+    ? history.find((g) => g.id === viewingId) ?? null
     : null;
 
   // The stats chart is the one screen that benefits from a wide viewport, so it
@@ -491,9 +527,11 @@ function App() {
     ? `edit-${editingId}`
     : viewingStats
       ? "stats"
-      : viewingHistory
-        ? "history"
-        : session.phase;
+      : viewingRecord
+        ? `game-${viewingRecord.id}`
+        : viewingHistory
+          ? "history"
+          : session.phase;
 
   return (
     <ToastProvider>
@@ -522,6 +560,8 @@ function App() {
               />
             ) : viewingStats ? (
               <StatsScreen history={history} dispatch={dispatch} />
+            ) : viewingRecord ? (
+              <GameDetailScreen record={viewingRecord} dispatch={dispatch} />
             ) : viewingHistory ? (
               <HistoryScreen history={history} dispatch={dispatch} />
             ) : (
