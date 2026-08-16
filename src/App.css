@@ -1395,6 +1395,28 @@
 
 /* Stats screen */
 
+.stats-screen .section-header-actions {
+  align-items: center;
+}
+
+.stats-theme-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.stats-theme-btn:hover {
+  color: var(--text-heading);
+  border-color: var(--primary);
+}
+
 .stats-month-nav {
   display: flex;
   align-items: center;

@@ -33,11 +33,47 @@ const LINE_COLORS = [
   "#f97316", "#84cc16",
 ];
 
+// Same hues in the same order, darkened so they stay readable on white --
+// the pale ones above (indigo-200, pink-300, gray-400) wash out on a light bg.
+const LINE_COLORS_LIGHT = [
+  "#dc2626", "#a16207", "#4f46e5", "#db2777", "#0d9488",
+  "#4338ca", "#15803d", "#475569", "#9333ea", "#0891b2",
+  "#ea580c", "#4d7c0f",
+];
+
+const THEME_KEY = "pocer_stats_theme";
+
+function loadTheme(): "dark" | "light" {
+  try {
+    return sessionStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
 const POINT_WIDTH = 56; // px per session column, drives horizontal scroll on mobile
 const WIDE_QUERY = "(min-width: 900px)";
 
 export default function StatsScreen({ history, dispatch }: Props) {
   const isWide = useMediaQuery(WIDE_QUERY);
+
+  // The chart is the one screen people read on a bright table, so it gets its
+  // own light/dark switch. The class lives on <html> only while stats is open;
+  // the rest of the app stays dark.
+  const [theme, setTheme] = useState<"dark" | "light">(loadTheme);
+  const isLight = theme === "light";
+  useEffect(() => {
+    document.documentElement.classList.toggle("light-view", isLight);
+    try {
+      sessionStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // sessionStorage unavailable - the choice just won't survive a reload
+    }
+    return () => document.documentElement.classList.remove("light-view");
+  }, [theme, isLight]);
+
+  const lineColors = isLight ? LINE_COLORS_LIGHT : LINE_COLORS;
+
   const monthGroups = useMemo(() => groupGamesByAccountingMonth(history), [history]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -167,7 +203,17 @@ export default function StatsScreen({ history, dispatch }: Props) {
           ← Back
         </button>
         <h2>Net Worth</h2>
-        <span className="player-count">{monthGames.length} games</span>
+        <div className="section-header-actions">
+          <button
+            className="stats-theme-btn"
+            onClick={() => setTheme(isLight ? "dark" : "light")}
+            aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
+            title={isLight ? "Dark theme" : "Light theme"}
+          >
+            {isLight ? "☾" : "☀"}
+          </button>
+          <span className="player-count">{monthGames.length} games</span>
+        </div>
       </div>
 
       {monthGroups.length > 0 && (
@@ -238,7 +284,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                         type="monotone"
                         dataKey={s.name}
                         name={displayName(s.name)}
-                        stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                        stroke={lineColors[i % lineColors.length]}
                         strokeWidth={2}
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
@@ -275,7 +321,7 @@ export default function StatsScreen({ history, dispatch }: Props) {
                     >
                       <span
                         className="stats-legend-dot"
-                        style={{ background: LINE_COLORS[i % LINE_COLORS.length] }}
+                        style={{ background: lineColors[i % lineColors.length] }}
                       />
                       <span className="stats-legend-name">{displayName(s.name)}</span>
                       <span className={`stats-legend-value ${last > 0 ? "winner" : last < 0 ? "loser" : ""}`}>

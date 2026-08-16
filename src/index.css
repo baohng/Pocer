@@ -33,6 +33,42 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Light theme, opt-in per screen. StatsScreen toggles `.light-view` on <html>
+   while it is open (see StatsScreen.tsx); redefining the palette here is enough
+   because every screen -- including the recharts strokes -- reads these vars.
+   The class sits on the root element so the page canvas itself flips too. */
+:root.light-view {
+  --bg: #f4f5f9;
+  --bg-card: #ffffff;
+  --bg-card-glass: rgba(255, 255, 255, 0.75);
+  --bg-input: #eceef4;
+  --border: #dde0e9;
+  --border-glass: rgba(15, 17, 23, 0.08);
+  --text: #4b5563;
+  --text-heading: #111827;
+  --text-muted: #6b7280;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --green: #15803d;
+  --green-bg: rgba(21, 128, 61, 0.12);
+  --red: #dc2626;
+  --red-bg: rgba(220, 38, 38, 0.1);
+  --yellow: #a16207;
+  --yellow-bg: rgba(161, 98, 7, 0.12);
+
+  color: var(--text);
+  background: var(--bg);
+}
+
+:root.light-view body::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99, 102, 241, 0.1), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 75%, rgba(139, 92, 246, 0.07), transparent 70%);
+}
+
 * {
   margin: 0;
   padding: 0;
