@@ -470,16 +470,28 @@ function App() {
     const token = readJoinTokenFromUrl();
     if (!token) return;
     let cancelled = false;
-    decodeSession(token).then((session) => {
-      if (cancelled) return;
-      setDecodingShare(false);
-      if (session) {
-        setPendingShare(session);
-      } else {
+    decodeSession(token)
+      .then((session) => {
+        if (cancelled) return;
+        setDecodingShare(false);
+        if (session) {
+          setPendingShare(session);
+        } else {
+          setShareError(true);
+          clearJoinTokenFromUrl();
+        }
+      })
+      // decodeSession needs crypto.subtle, which only exists in a secure
+      // context -- opening a share link over plain http (a LAN IP during
+      // local testing) rejects here. Without this the screen just hung on
+      // "decoding" forever.
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Share decode error:", err);
+        setDecodingShare(false);
         setShareError(true);
         clearJoinTokenFromUrl();
-      }
-    });
+      });
     return () => {
       cancelled = true;
     };

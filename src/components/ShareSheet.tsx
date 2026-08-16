@@ -18,17 +18,8 @@ export default function ShareSheet({ session, onClose }: Props) {
   useEffect(() => {
     let cancelled = false;
     encodeSession(session)
-      .then(async (p) => {
-        if (cancelled) return;
-        setPayload(p);
-        // Draw QR after the canvas mounts (next microtask gives React time to render)
-        await Promise.resolve();
-        if (cancelled || !canvasRef.current) return;
-        await QRCode.toCanvas(canvasRef.current, p.url, {
-          margin: 1,
-          width: 220,
-          color: { dark: "#0f1115", light: "#ffffff" },
-        });
+      .then((p) => {
+        if (!cancelled) setPayload(p);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -40,6 +31,23 @@ export default function ShareSheet({ session, onClose }: Props) {
       cancelled = true;
     };
   }, [session]);
+
+  // Drawing has to be its own effect: the canvas only exists once `payload` is
+  // set, so the ref isn't populated until React has committed that render.
+  // Awaiting a microtask inside the encode promise is not enough -- React
+  // schedules the re-render as a macrotask, so the ref was still null and the
+  // QR silently never got drawn.
+  useEffect(() => {
+    if (!payload || !canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, payload.url, {
+      margin: 1,
+      width: 220,
+      color: { dark: "#0f1115", light: "#ffffff" },
+    }).catch((err) => {
+      console.error("QR render error:", err);
+      setError("Could not render the QR code.");
+    });
+  }, [payload]);
 
   async function copyLink() {
     if (!payload) return;
